@@ -11,14 +11,15 @@ Equipe AstroCoders · NASA Space Apps Challenge 2026 · 14–15/11/2026.
 
 ## 0. Estado atual do repositório
 
-- Stack real: Vite + React 19 + TypeScript + `@react-three/fiber`/`drei` + zustand + vitest. Sem git ainda.
-- Comandos: `npm run dev` (http://localhost:5173; a rota `/api/space-weather` é um middleware do Vite que busca o DONKI) · `npm run build` (typecheck + build) · `npm run typecheck` · `npm test` (vitest; um teste: `npx vitest run -t "nome do teste"`).
-- Estado: protótipo funcional dos RF-01 a RF-15. Telas: Crew → Body → System → Metric, mais Log de medição, Today's queue, Decision diary, Flight surgeon packet e Sources. Corpo 3D real (Z-Anatomy, 6 GLB em `public/models`, ver `public/models/ATTRIBUTION.md`).
+- Stack: Vite + React 19 + TypeScript + `@react-three/fiber`/`drei` + `@react-three/postprocessing` + zustand + vitest. Sem git ainda.
+- Comandos: `npm run dev` (http://localhost:5173; `/api/space-weather` é um middleware do Vite que busca o DONKI) · `npm run build` (typecheck + build) · `npm run typecheck` · `npm test` (um teste: `npx vitest run -t "nome"`).
+- Parâmetros de URL para demonstrar e depurar: `?suit=1&xray=1&solar=1&day=200&link=blackout` (lidos em `urlFlags()` de `src/state/store.ts`).
+- Funcional: RF-01 a RF-15. Telas: Crew (formação 3D da tripulação), Body, System, Metric, mais Log de medição, Today's queue, Decision diary, Flight surgeon packet e Sources (as quatro últimas e a simulação ficam no Menu).
+- **Decisão de design de 28/10/2026, do dono do produto:** o design anterior (painéis densos, holograma cinza, hotspots flutuantes) foi descartado. Agora é uma cena 3D cinematográfica com personagem realista (pele colorida, cabelo, olhos, macacão), clique direto nas regiões do corpo, traje de EVA vestível que muda a radiação, e UI mínima em vidro. Isso **substitui** o "holograma clínico", os tokens antigos e o descarte de "cor de olhos e cabelo" da spec. Menos informação por tela é requisito, não preferência.
 - Motor de status de verdade: `src/engine/status.ts` + `projection.ts`, regras por métrica em `src/data/rules.ts`. Os status NÃO são marcados à mão: a matriz do dia 142 sai do motor e é testada em `src/engine/status.test.ts`. Para mudar o cenário de um astronauta, altere só valores em `src/data/astronauts.ts` (`overrides`).
 - Séries sintéticas determinísticas por (astronauta, métrica, dia) em `src/lib/model.ts` (`resolveMetric` é memoizado). Métricas periódicas só ganham ponto novo quando o astronauta registra uma medição.
-- Cena 3D: `src/scene/anatomy.ts` baixa cada GLB, classifica as malhas por palavra-chave de nome (sistema) e funde tudo em poucas geometrias; `useAnatomy.ts` carrega camadas sob demanda e normaliza (altura 1.80, +z). Hotspots são DOM (drei `Html`); há um `<Html>` sentinela em `BodyCanvas.tsx` porque o drei descarta a primeira instância montada. Não reativar `StrictMode` sem rever isso.
-- Fora do escopo ainda: camada de IA e servidor de explicação (os textos são de reserva, marcados `Offline explanation`), modo EVA, entrada por câmera, OSDR, fallback SVG sem WebGL (existe corpo por primitivas se o GLB falhar).
-- Objetivo de desenvolvimento declarado: apresentar dados com um design impressionante que capte a atenção em menos de 5 segundos. Isso é alcançado **dentro** das regras da §2 e §3 (a tela Crew, o corpo 3D e os tokens da §11 são o impacto visual); não com landing page, hero ou modo apresentação.
+- **Suposição declarada:** `SUIT_SHIELD_FACTOR = 2` (`src/lib/model.ts`). Fora do casco só o traje blinda, então a taxa de dose sobe ×2 sobre os 1,8 mSv/dia medidos pelo RAD. O fator não tem fonte publicada; trocar pela dosimetria real. A UI avisa disso. O traje muda taxa, projeção, dias até o limite e o status por regra, nunca o que já foi absorvido.
+- Fora do escopo ainda: camada de IA e servidor de explicação (textos de reserva, marcados `Offline explanation`), entrada por câmera, OSDR, fallback sem WebGL. O corpo-base do atlas é masculino; Lena e Aiko usam uma deformação de proporções (`warp` em `bodyBuild.ts`), não um modelo feminino de verdade.
 
 ---
 
@@ -51,27 +52,29 @@ Estas regras valem para todo código gerado. Violar qualquer uma delas destrói 
 5. **Cor significa status e nada mais.** Verde, âmbar e vermelho nunca são decoração.
 6. **Status nunca é comunicado só por cor:** sempre forma + palavra — `● NOMINAL`, `▲ WATCH`, `◆ CRITICAL`.
 7. **Limite oficial aparece com o ID** (`NASA-STD-3001 [V1 4027] ≥ 95%`). Limite nosso aparece como `Provisional threshold`.
-8. **O app abre direto na tela Crew.** Sem landing page, hero, tour, onboarding ou modo apresentação.
+8. **O app abre direto na tela Crew.** Sem landing page, tour, onboarding ou modo apresentação. O título da Crew é a resposta à pergunta ("quem precisa de atenção?"), não uma hero de marketing.
 9. **Todo texto de interface em INGLÊS.** Comentários de código e documentação podem ser em português.
 10. **Chamadas a LLM e a APIs externas só em rotas de servidor.** Chave de API nunca no cliente.
-11. **Tripulação 100% fictícia.** Sem fotos, sem rostos, só iniciais.
+11. **Tripulação 100% fictícia.** Sem fotos nem pessoas reais. Os rostos são do modelo genérico do atlas, coloridos para a tripulação fictícia.
 
 ---
 
 ## 3. Arquitetura de informação — o orçamento por tela
 
-Cada nível responde a UMA pergunta. Se algo não cabe no orçamento, não entra.
+Cada nível responde a UMA pergunta. Se algo não cabe no orçamento, não entra. Menos é requisito.
 
 | Nível | Tela | Pergunta | Teto |
 |---|---|---|---|
-| 0 | `Crew` | Quem precisa de atenção? | 4 cartões. Zero números fora da barra superior |
-| 1 | `Body` | O que acontece comigo e o que faço hoje? | Corpo 3D + 7 pontos + **1** ação. Sem rolagem |
-| 2 | `System` | Como está este sistema e por quê? | Máx. **3** métricas, **2** ações. Explicação recolhida |
-| 3 | `Metric` | De onde vem este número? | 1 gráfico, fonte, limiar, proveniência. Explicação aberta |
+| 0 | `Crew` | Quem precisa de atenção? | Formação 3D, **uma frase** de título e uma placa (nome + status) por astronauta. Zero números além do dia e do link |
+| 1 | `Body` | O que acontece comigo e o que faço hoje? | Veredito + **1** ação + no máximo 1 aviso de medição. O corpo 3D é o mapa: clique direto nas regiões |
+| 2 | `System` | Como está este sistema e por quê? | Máx. **3** medidores, **2** ações. Explicação recolhida. Radiação soma o cartão de exposição (Habitat × traje de EVA) |
+| 3 | `Metric` | De onde vem este número? | Valor grande, 1 gráfico com projeção, 1 frase "Why", 1 ação. Fonte e explicação em "About this number" (recolhido) |
 
-Navegação por hash: `#/crew` · `#/body/{id}` · `#/body/{id}/{system}` · `#/body/{id}/{system}/{metric}`.
+Fila do dia, pacote para o flight surgeon, diário, fontes, simulação e créditos ficam no **Menu** (ícone no canto), nunca na tela principal.
 
-O canvas 3D é montado ao entrar no nível 1 e **não é desmontado** ao trocar entre níveis 1–3 nem ao trocar de astronauta.
+Navegação por hash: `#/crew` · `#/sources` · `#/body/{id}` · `#/body/{id}/{queue|diary|packet}` · `#/body/{id}/{system}` · `#/body/{id}/{system}/{metric}` · `#/body/{id}/{system}/{metric}/log`. `Esc` sobe um nível.
+
+Há **um** `<Canvas>` para o app inteiro (`src/scene/Stage.tsx`). Ele não desmonta ao trocar de tela: a formação da Crew vira o corpo focado e os outros três astronautas se dissolvem.
 
 ---
 
@@ -188,75 +191,69 @@ Diário de decisões: `{timestamp ISO, missionDay, astronautId, systemId, action
 
 ---
 
-## 10. O corpo 3D
+## 10. O corpo 3D e o cenário
 
-Estilo: **holograma clínico elegante** sobre fundo escuro. Não cartum, não fotorrealista.
+**Corpo.** A camada de pele do Z-Anatomy (`public/models/skin.glb`) é a base: regiões nomeadas, rosto, orelhas, mãos, cabelo. `src/scene/bodyBuild.ts` a transforma em personagem:
+- cor de pele única por astronauta (os materiais zebrados do atlas são ignorados), tom nos lábios e orelhas, cabelo, sobrancelhas e cílios na cor do cabelo, olhos procedurais com íris colorida e córnea com brilho;
+- um **id de sistema por vértice** (`aSys`), derivado do nome da região por regras em `RULES` (cabeça e rosto → behavior; órbitas → neuro_ocular; pescoço e virilha → immune; tórax → cardiovascular; abdômen alto → nutrition; baixo-ventre e costas → skeletal; braços e pernas → muscular). Regiões `soft` (rosto) contam para o sistema, mas não se dissolvem;
+- macacão e traje de EVA são **cascas infladas das próprias regiões** ao longo de normais soldadas por posição (sem fendas entre regiões);
+- a região urogenital é relaxada (média dos vizinhos) e os genitais do atlas são excluídos das camadas internas: o personagem é sempre vestido;
+- variantes `male` e `female` (`warp`) compartilham geometria entre astronautas do mesmo corpo-base.
 
-Modelo: 6 arquivos GLB do Shandon's Body Atlas (Z-Anatomy, CC BY-SA 4.0), carregados por CDN, com compressão meshopt. Camadas: `skin`, `skeleton`, `organs`, `muscles`, `vessels`, `nerves`.
+**Interação (RF-14).** Clique e hover são por região do corpo, sem botões flutuantes: raycast com BVH na geometria `pick` (invisível), `faceIndex` → `aSys`. Olhos têm raio de clique generoso, o dosímetro do braço e a aura abrem a radiação; o corpo tem prioridade sobre a aura. O hover mostra o nome do sistema e o status junto ao cursor. Teclado: listas de sistemas e da tripulação, visíveis só ao receber foco.
+
+**Shader do corpo** (`bodyShader.ts`, injetado em `MeshStandardMaterial`): hover e listras de status por sistema, **dissolução** da região selecionada revelando a anatomia interna, raio-X geral, varredura de altura que veste e despe o traje, e fade geral do astronauta. As camadas internas (`AnatomyLayers.tsx`: esqueleto, órgãos, vasos, nervos, músculos) carregam sob demanda, são fundidas por sistema e brilham na cor do status do sistema selecionado. O coração pulsa na FC (bpm/60 Hz).
+
+**Traje de EVA.** Botão "EVA suit" no dock (ou no cartão de exposição da Radiação). A varredura veste o traje (casca branca, capacete com viseira dourada, mochila, unidade no peito, anéis, faixa na cor de acento do astronauta), a câmara de ar escurece a imagem e a cena troca para o lado de fora do casco (Sol, Marte, nave com cabo de segurança, partículas). Sem traje: baia médica, janela para Marte e Terra. A taxa de dose sobe (`doseRate` em `model.ts`), a projeção de dose de carreira muda por regra e o motor reavalia o status.
+
+**Cenário.** `Environment.tsx` (baia chanfrada com janela, costelas e luzes; fora do casco) e texturas 100% procedurais em `textures.ts` (estrelas, Marte, painéis, olhos, plaquetas). Marte cresce e a Terra encolhe com o dia da missão. Luz chave quente, recorte laranja da janela, reflexos por `RoomEnvironment` (nada é baixado). Pós-processamento: bloom, vinheta, ACES.
 
 Obrigatório:
-- **Normalizar** todas as camadas com a mesma transformação: altura 1.80, pés em y=0, olhando para +z. Imprimir no console dimensões e rotação aplicada.
-- **Substituir materiais originais** por `MeshStandardMaterial` neutros, um por camada. Nenhum material base pode ser verde, âmbar ou vermelho saturado.
-- **Índice de nós por palavra-chave**; registrar no console quantos casaram por sistema. Se zero, acender a camada inteira. Nunca quebrar por causa de nome.
-- **Corpo simplificado por primitivas** como placeholder e reserva, se o download falhar.
-- **Atribuição** no canvas e no modal de créditos: `Model data: Z-Anatomy — the libre 3D atlas of anatomy (CC-BY-SA 4.0), derived from BodyParts3D © The Database Center for Life Science.`
+- **Atribuição** no rodapé do canvas e no modal de créditos: `Model data: Z-Anatomy — the libre 3D atlas of anatomy (CC-BY-SA 4.0), derived from BodyParts3D © The Database Center for Life Science.`
+- **Altura cresce** com o alongamento da coluna (até 3%, `estimatedHeight`); a largura vem da massa registrada.
+- Respeitar `prefers-reduced-motion` (sem flutuação, giro, pulso nem varredura lenta).
+- Descartado: corpo baseado em fotos de pessoas reais.
 
-Decisões visuais aprovadas:
-- **Altura cresce ao longo da missão** — astronautas crescem até 3% por alongamento da coluna, começando em até 2 dias. Dado real, documentado.
-- **Proporção derivada de massa e altura registradas**, nunca de seletor.
-- **Modo EVA** em vez de "com ou sem traje": o traje é blindagem; alternar mostra a dose dentro e fora do habitat.
-- **Batimento**: nós do coração pulsam na FC exibida (bpm/60 Hz).
-
-Descartado, não reintroduzir: cor de olhos e cabelo, corpo baseado em fotos de astronautas reais, pele fotorrealista com textura e cabelo.
-
-Desempenho: `dpr [1, 2]`, sem sombras, material compartilhado por camada, meshes anatômicos **sem handlers de evento** (só hotspots recebem ponteiro). Meta 60 fps.
-Respeitar `prefers-reduced-motion`. Sem WebGL, cair para silhueta SVG com os mesmos 7 pontos clicáveis.
+Desempenho: `dpr [1, 1.75]`, sem sombras, geometrias fundidas, picking com BVH, camadas internas só quando precisam. Não reativar `StrictMode` sem testar a cena.
 
 ---
 
-## 11. Design tokens
+## 11. Design
+
+Vidro sobre cena cinematográfica: painéis com `backdrop-filter`, raio 20–28 px, tipografia grande, uma ação por tela. Cor só para status: verde, âmbar e vermelho nunca são decoração (a cena usa tons naturais, azul-marinho de uniforme e o laranja de Marte).
 
 ```css
---bg: #070B14;        --surface: #0E1526;   --surface-2: #141D33;
---border: #22304D;    --text: #E8EDF7;      --text-muted: #8C9AB5;
---nominal: #3DDC97;   --watch: #FFB547;     --critical: #FF5D5D;
---live: #5CC8FF;
+--ink: #f2f5ff;  --ink-2: #b4bfdc;  --ink-3: #7f8bb0;
+--nominal: #3ddc97; --watch: #ffb547; --critical: #ff5d5d; --live: #5cc8ff;
 ```
 
-Tipografia: `Inter` para interface; `JetBrains Mono` com números tabulares para **todo** valor numérico.
-Rótulos 12 px caixa alta, espaçamento 0.08em, cor muted. Títulos 18–20 px semibold. Valores de métrica 28 px mono.
-Cartões: raio 12 px, borda 1 px `--border`, sem sombras. Grade de 8 px.
-Texto: inglês, sentence case, sem exclamações, sem emojis, máx. 1 casa decimal, dias como `Day 142`.
-Referência 1280×800. Abaixo de 1024 px o painel direito vira bottom sheet; abaixo de 640 px os cartões empilham.
-Acessibilidade: contraste AA, navegação completa por teclado, `aria-label` em hotspots e linhas de sistema, `aria-live="polite"` para mudança de status.
+Tipografia: `Space Grotesk` para interface e títulos; `JetBrains Mono` com números tabulares para todo valor numérico (valor de métrica 36 px, no nível 3 64 px).
+Texto: inglês, sentence case, sem exclamações, sem emojis, máx. 1 casa decimal, dias como `Day 142`. Status sempre com forma + palavra (`● NOMINAL`, `▲ WATCH`, `◆ CRITICAL`).
+Todo número tem unidade, baseline pré-voo e selo (nos medidores e no cabeçalho do nível 3).
+Referência 1440×800. Abaixo de 1024 px o painel vira bottom sheet e o dock sobe.
+Acessibilidade: contraste AA, `aria-label` nos medidores e nas listas de teclado, `aria-live="polite"` para o veredito.
 
 ---
 
-## 12. Stack e estrutura
+## 12. Estrutura
 
 ```
 /src
-  /state/store.ts           zustand: astronauta, nível, sistema, métrica, dia, link, evento, diário
-  /data
-    anatomy.ts              ANATOMY_BASE, arquivos, lotes, palavras-chave por sistema
-    astronauts.ts           4 perfis fictícios, baseline → alvo, sementes
-    systems.ts              sistemas, métricas, limiares, sourceNotes, presets de câmera, hotspots
-    requirements.ts         IDs NASA-STD-3001
-    actions.ts              catálogo fechado
-    generator.ts            PRNG semeado (mulberry32), séries dia 0 → 250
-  /engine
-    status.ts               motor determinístico
-    projection.ts           regressão linear
-    status.test.ts          testes por regra + matriz esperada
-  /scene                    BodyCanvas, AnatomyModel, ProceduralBody, Hotspots, CameraRig, RadiationAura
-  /ui                       TopBar, CrewScreen, BodyScreen, SystemPanel, MetricRow, MetricDrawer,
-                            ActionCard, StatusPill, ProvenanceBadge, Sparkline, CommsDrawer, SimulationMenu
-  /services/api.ts          chamadas às rotas do servidor
-/server                     /api/explain, /api/earth-packet, /api/space-weather
+  /state/store.ts           zustand: dia, solar, link, traje, raio-X, hover, menu; diário, medições, flags (localStorage)
+  /data                     astronauts (aparência + overrides), systems, rules, extras, actions
+  /engine                   status.ts, projection.ts, status.test.ts
+  /lib                      model.ts (resolveMetric, exposição, fila, pacote), route.ts, format.ts, spaceWeather.ts
+  /scene
+    Stage.tsx               Canvas único, câmera, mundo, ciclo da câmara de ar
+    AstronautRig.tsx        um astronauta: cascas, cabelo, olhos, traje, clique por região, aura
+    bodyBuild.ts            pele do atlas → regiões, sistemas, cascas, deformação feminina
+    bodyShader.ts           shader do corpo (hover, status, dissolução, varredura, fade)
+    AnatomyLayers.tsx, anatomy.ts, useAnatomy.ts   camadas internas sob demanda
+    Environment.tsx, textures.ts, Particles.tsx    cenário, texturas procedurais, radiação
+  /ui                       Hud (HUD, Crew, dock, menu, créditos), Panel (níveis 1–3), panels (fila, log, diário, pacote), primitives, SourcesScreen
+/public/models              6 GLB do Shandon's Body Atlas + ATTRIBUTION.md
+vite.config.ts              plugin com a rota /api/space-weather (DONKI, só no servidor)
 ```
-
-Front: React + Three.js (`@react-three/fiber`, `drei`).
-Dados determinísticos: PRNG semeado por astronauta, para que tudo seja reprodutível.
 
 ---
 
@@ -303,9 +300,9 @@ Cada item aqui custaria pontos se entrasse:
 
 - [ ] Abre direto em `Crew`; nenhuma landing page
 - [ ] 4 astronautas com a matriz de status esperada no dia 142
-- [ ] Modelo anatômico carrega normalizado; se falhar, corpo simplificado com aviso
+- [ ] O personagem carrega com cor, cabelo, olhos e macacão; clicar em cada região abre o sistema certo
 - [ ] Atribuição Z-Anatomy visível no canvas e no modal
-- [ ] No nível 1, os únicos números visíveis são dia da missão, atraso do link, dose de carreira e duração da ação
+- [ ] O nível 1 mostra veredito, 1 ação e no máximo 1 aviso de medição; nenhum outro número
 - [ ] Nenhum painel de sistema mostra mais de 3 métricas ou 2 ações
 - [ ] Todo número tem unidade, baseline e selo de proveniência
 - [ ] Limites oficiais mostram o ID NASA; os demais mostram "Provisional threshold"

@@ -4,7 +4,7 @@ import type { Astronaut } from '../types'
 // os overrides só definem os valores do dia 142 e quando cada exame foi feito pela última vez.
 export const ASTRONAUTS: Astronaut[] = [
   {
-    id: 'lena', initials: 'LM', name: 'Lena Moreau', role: 'Commander', heightM: 1.7, tempBaseline: 36.6, tempNow: 36.7,
+    id: 'lena', initials: 'LM', name: 'Lena Moreau', role: 'Commander', look: { skin: '#e8bfa3', hair: '#5a3524', eyes: '#4f7fa8', build: 'female', accent: '#4f8cff' }, heightM: 1.7, tempBaseline: 36.6, tempNow: 36.7,
     headline: {
       nominal: 'All systems on baseline.',
       watch: 'Career radiation dose is on course to reach its limit before arrival.',
@@ -17,7 +17,7 @@ export const ASTRONAUTS: Astronaut[] = [
     },
   },
   {
-    id: 'rafael', initials: 'RD', name: 'Rafael Duarte', role: 'Flight Engineer', heightM: 1.82, tempBaseline: 36.5, tempNow: 36.5,
+    id: 'rafael', initials: 'RD', name: 'Rafael Duarte', role: 'Flight Engineer', look: { skin: '#c58b62', hair: '#17110e', eyes: '#7a5a2c', build: 'male', accent: '#a37bff' }, heightM: 1.82, tempBaseline: 36.5, tempNow: 36.5,
     headline: {
       nominal: 'All systems on baseline.',
       watch: 'Exercise has slipped from plan, and bone and muscle are starting to pay for it.',
@@ -32,7 +32,7 @@ export const ASTRONAUTS: Astronaut[] = [
     },
   },
   {
-    id: 'aiko', initials: 'AS', name: 'Aiko Sato', role: 'Crew Medical Officer', isCMO: true, heightM: 1.62, tempBaseline: 36.6, tempNow: 36.8,
+    id: 'aiko', initials: 'AS', name: 'Aiko Sato', role: 'Crew Medical Officer', isCMO: true, look: { skin: '#ecc9a8', hair: '#1d1513', eyes: '#3b2518', build: 'female', accent: '#dfe6f7' }, heightM: 1.62, tempBaseline: 36.6, tempNow: 36.8,
     headline: {
       nominal: 'All systems on baseline.',
       watch: 'Energy intake is drifting down toward the requirement.',
@@ -46,7 +46,7 @@ export const ASTRONAUTS: Astronaut[] = [
     },
   },
   {
-    id: 'daniel', initials: 'DO', name: 'Daniel Osei', role: 'Mission Specialist', heightM: 1.78, tempBaseline: 36.7, tempNow: 36.7,
+    id: 'daniel', initials: 'DO', name: 'Daniel Osei', role: 'Mission Specialist', look: { skin: '#7b4d34', hair: '#0f0c0b', eyes: '#47290f', build: 'male', accent: '#6ec1e4' }, heightM: 1.78, tempBaseline: 36.7, tempNow: 36.7,
     headline: {
       nominal: 'All systems on baseline.',
       watch: 'Mild optic disc swelling, and lymphocytes are below the usual range.',

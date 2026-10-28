@@ -61,30 +61,37 @@ export function OfflineTag() {
   return <span className="offline" title="Fallback text from the closed catalog; no model call was made">Offline explanation</span>
 }
 
-/** Sparkline de 30 dias com a linha horizontal do limite (spec §identidade visual). */
-export function Sparkline({ m }: { m: ResolvedMetric }) {
-  const w = 112
-  const h = 32
-  const last = m.points[m.points.length - 1].day
-  const pts = m.cadence.mode === 'continuous' ? m.points.filter((p) => p.day >= last - 30) : m.points.slice(-6)
-  const view = pts.length >= 2 ? pts : m.points.slice(-2)
+/** Medidor: onde o valor está entre o baseline pré-voo e o limite. Não depende só da cor. */
+export function Gauge({ m }: { m: ResolvedMetric }) {
   const limit = m.threshold.limit
-  const vals = [...view.map((p) => p.value), ...(limit !== undefined ? [limit] : [])]
-  const min = Math.min(...vals)
-  const max = Math.max(...vals)
-  const span = max - min || 1
-  const d0 = view[0].day
-  const d1 = view[view.length - 1].day || 1
-  const x = (d: number) => 2 + ((d - d0) / (d1 - d0 || 1)) * (w - 4)
-  const y = (v: number) => h - 3 - ((v - min) / span) * (h - 6)
-  const path = view.map((p, i) => `${i ? 'L' : 'M'}${x(p.day).toFixed(1)} ${y(p.value).toFixed(1)}`).join(' ')
-  const tail = view[view.length - 1]
+  const range = m.threshold.range
+  const marks = [m.baseline, m.value, limit, ...(range ?? [])].filter((v): v is number => v !== undefined)
+  let lo = Math.min(...marks)
+  let hi = Math.max(...marks)
+  const pad = (hi - lo || Math.abs(hi) * 0.1 || 1) * 0.18
+  lo -= pad
+  hi += pad
+  const pos = (v: number) => `${Math.min(100, Math.max(0, ((v - lo) / (hi - lo)) * 100))}%`
+  const dir = m.rule.dir
+  const safe: [number, number] | null = range
+    ? range
+    : limit !== undefined && dir === 'min'
+      ? [limit, hi]
+      : limit !== undefined && dir === 'max'
+        ? [lo, limit]
+        : null
+  const from = Math.min(m.baseline, m.value)
+  const to = Math.max(m.baseline, m.value)
   return (
-    <svg className={`spark s-${m.status}`} width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
-      {limit !== undefined && <line x1="0" x2={w} y1={y(limit)} y2={y(limit)} className="spark-limit" />}
-      <path d={path} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx={x(tail.day)} cy={y(tail.value)} r="2.5" fill="currentColor" />
-    </svg>
+    <div className={`gauge s-${m.status}`} aria-hidden="true">
+      <div className="gauge-track">
+        {safe && <i className="gauge-safe" style={{ left: pos(safe[0]), width: `calc(${pos(safe[1])} - ${pos(safe[0])})` }} />}
+        <i className="gauge-fill" style={{ left: pos(from), width: `calc(${pos(to)} - ${pos(from)})` }} />
+        <i className="gauge-base" style={{ left: pos(m.baseline) }} />
+        {limit !== undefined && <i className="gauge-limit" style={{ left: pos(limit) }} />}
+        <i className="gauge-dot" style={{ left: pos(m.value) }} />
+      </div>
+    </div>
   )
 }
 
@@ -223,16 +230,6 @@ export function TrendCompare({ metrics }: { metrics: ResolvedMetric[] }) {
         ))}
       </figcaption>
     </figure>
-  )
-}
-
-export function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="statcell">
-      <span className="label">{label}</span>
-      <span className="mono val">{value}</span>
-      {sub && <span className="muted small">{sub}</span>}
-    </div>
   )
 }
 

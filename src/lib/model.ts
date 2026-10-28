@@ -17,6 +17,33 @@ export const LINK_DELAY_MIN = 21
 /** Dose de cruzeiro medida pelo RAD no MSL (mSv/dia) */
 export const CRUISE_DOSE_RATE = 1.8
 export const SOLAR_FLUX = 1240
+/**
+ * Fator de blindagem do traje de EVA: fora do casco, só o traje blinda, então a taxa sobe.
+ * ASSUNÇÃO DO PROTÓTIPO, sem fonte publicada: substituir pela dosimetria real da missão.
+ */
+export const SUIT_SHIELD_FACTOR = 2
+const DOSE_METRICS = new Set(['mission_dose', 'career_dose'])
+
+/** Taxa de dose da exposição atual (mSv/dia): casco do habitat (medida) ou só o traje (estimada). */
+export const doseRate = (sim: Pick<Sim, 'suit'>) => CRUISE_DOSE_RATE * (sim.suit ? SUIT_SHIELD_FACTOR : 1)
+
+export interface Exposure {
+  label: string
+  rate: number
+  provenance: 'CONTINUOUS' | 'ESTIMATED'
+  shielding: string
+}
+
+export function exposure(sim: Pick<Sim, 'suit'>): Exposure {
+  return sim.suit
+    ? { label: 'EVA suit', rate: doseRate(sim), provenance: 'ESTIMATED', shielding: 'Outside the hull. Only the suit shields you.' }
+    : { label: 'Habitat', rate: doseRate(sim), provenance: 'CONTINUOUS', shielding: 'Inside the hull. The structure shields you.' }
+}
+
+/** Dose de carreira projetada para o fim da missão, mantida a exposição atual. */
+export function careerAtArrival(value: number, sim: Pick<Sim, 'suit' | 'day'>) {
+  return value + doseRate(sim) * Math.max(0, MISSION_LENGTH - sim.day)
+}
 
 export const getAstronaut = (id: string) => ASTRONAUTS.find((a) => a.id === id)!
 
@@ -94,18 +121,20 @@ const cache = new Map<string, ResolvedMetric>()
 export function resolveMetric(astro: Astronaut, metricId: string, sim: Sim): ResolvedMetric {
   const def = METRICS[metricId]
   const nMeas = sim.measurements.reduce((n, m) => (m.astronautId === astro.id && m.metric === metricId ? n + 1 : n), 0)
-  const key = `${astro.id}:${metricId}:${sim.day}:${sim.solar}:${nMeas}`
+  const isDose = DOSE_METRICS.has(metricId)
+  const key = `${astro.id}:${metricId}:${sim.day}:${sim.solar}:${nMeas}:${isDose && sim.suit ? 'suit' : ''}`
   const hit = cache.get(key)
   if (hit) return hit
   if (cache.size > 4000) cache.clear()
   const points = buildPoints(astro, def, sim)
   const lastPt = points[points.length - 1]
   const baseline = astro.overrides[metricId]?.baseline ?? def.baseline
+  const rate = isDose ? doseRate(sim) : undefined
   const evaluation = evaluateMetric(def.rule, {
-    value: lastPt.value, baseline, unit: shortUnit(def.unit), decimals: def.decimals, points, day: sim.day, cadence: def.cadence,
+    value: lastPt.value, baseline, unit: shortUnit(def.unit), decimals: def.decimals, points, day: sim.day, cadence: def.cadence, rate,
   })
   const r: ResolvedMetric = {
-    ...def, baseline, value: lastPt.value, lastDay: lastPt.day, points, eval: evaluation, status: evaluation.status,
+    ...def, baseline, value: lastPt.value, lastDay: lastPt.day, points, eval: evaluation, status: evaluation.status, rate,
   }
   cache.set(key, r)
   return r

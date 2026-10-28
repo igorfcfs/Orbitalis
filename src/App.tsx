@@ -1,47 +1,60 @@
 import { useEffect } from 'react'
-import { go, paths, useRoute } from './lib/route'
-import { ATTRIBUTION } from './scene/anatomy'
+import { go, paths, parentPath, useRoute } from './lib/route'
+import { Stage } from './scene/Stage'
 import { useStore } from './state/store'
-import { BodyScreen } from './ui/BodyScreen'
-import { CrewScreen } from './ui/CrewScreen'
+import { CrewOverlay, Credits, Dock, Hud, HoverTip, MenuSheet, SystemRail } from './ui/Hud'
+import { Panel } from './ui/Panel'
 import { SourcesScreen } from './ui/SourcesScreen'
-import { TopBar } from './ui/TopBar'
-
-function Credits() {
-  const open = useStore((s) => s.creditsOpen)
-  const setCredits = useStore((s) => s.setCredits)
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setCredits(false)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, setCredits])
-  if (!open) return null
-  return (
-    <div className="modal-back" onClick={() => setCredits(false)}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Credits" onClick={(e) => e.stopPropagation()}>
-        <h2>Credits</h2>
-        <p className="small">{ATTRIBUTION}</p>
-        <p className="small muted">The exported layers are Shandon’s Body Atlas, built from Z-Anatomy, and remain under CC BY-SA 4.0. Orbitalis code is original.</p>
-        <p className="small muted">Crew, names and signals are fictional.</p>
-        <button type="button" className="btn primary" onClick={() => setCredits(false)}>Close</button>
-      </div>
-    </div>
-  )
-}
 
 export default function App() {
   const route = useRoute()
+  const setSuit = useStore((s) => s.setSuit)
+  const setXray = useStore((s) => s.setXray)
 
   // O app abre direto em Crew, sem landing page.
   useEffect(() => {
     if (!window.location.hash) go(paths.crew)
   }, [])
 
+  // Na formação da tripulação todos estão vestidos de macacão e sem raio-X
+  useEffect(() => {
+    if (route.level === 0) {
+      setSuit(false)
+      setXray(false)
+    }
+  }, [route.level, setSuit, setXray])
+
+  // Esc sobe um nível
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      const s = useStore.getState()
+      if (s.menuOpen || s.creditsOpen) return
+      if ((e.target as HTMLElement)?.closest?.('input, textarea')) return
+      if (route.level === 0 && !route.page) return
+      go(parentPath(route))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [route])
+
   return (
     <>
-      <TopBar route={route} />
-      {route.level === 0 ? route.page === 'sources' ? <SourcesScreen /> : <CrewScreen /> : <BodyScreen route={route} />}
+      <Stage route={route} />
+      <div className="ui">
+        <Hud />
+        {route.level === 0 && !route.page && <CrewOverlay />}
+        {route.level === 0 && route.page === 'sources' && <SourcesScreen />}
+        {route.level !== 0 && (
+          <>
+            <Panel route={route} />
+            <Dock route={route} />
+            <SystemRail route={route} />
+          </>
+        )}
+        <HoverTip route={route} />
+      </div>
+      <MenuSheet route={route} />
       <Credits />
     </>
   )

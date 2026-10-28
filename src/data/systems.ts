@@ -148,7 +148,7 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
       critical: 'A cardiovascular reading breaches its limit. Act now.',
     },
     actions: ['EX-AER', 'EARTH-PACKET'], hotspot: [0.06, 1.3, 0.13],
-    focus: { target: [0, 1.3, 0], distance: 2.6 }, metrics: ['rhr', 'sbp', 'vo2'],
+    focus: { target: [0, 1.3, 0.04], distance: 1.9 }, metrics: ['rhr', 'sbp', 'vo2'],
   },
   skeletal: {
     id: 'skeletal', name: 'Skeletal',
@@ -159,7 +159,7 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
       critical: 'Estimated bone density is below its limit. Act now.',
     },
     actions: ['EX-RES', 'EX-PLAN'], hotspot: [-0.13, 0.95, 0.11],
-    focus: { target: [0, 0.9, 0], distance: 3.0 }, metrics: ['bmd', 'fn'],
+    focus: { target: [0, 0.95, 0], distance: 2.6 }, metrics: ['bmd', 'fn'],
   },
   muscular: {
     id: 'muscular', name: 'Muscular',
@@ -170,7 +170,7 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
       critical: 'Strength is below its limit. Act now.',
     },
     actions: ['EX-PLAN', 'EX-RES'], hotspot: [0.14, 0.72, 0.11],
-    focus: { target: [0, 0.65, 0], distance: 3.0 }, metrics: ['strength', 'exercise'],
+    focus: { target: [0, 0.68, 0], distance: 3.0 }, metrics: ['strength', 'exercise'],
   },
   neuro_ocular: {
     id: 'neuro_ocular', name: 'Neuro-ocular',
@@ -181,7 +181,7 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
       critical: 'Optic disc swelling or vision loss needs attention now.',
     },
     actions: ['OCU-EXAM', 'EARTH-PACKET'], hotspot: [0, 1.68, 0.11],
-    focus: { target: [0, 1.68, 0], distance: 2.1 }, metrics: ['disc', 'acuity'],
+    focus: { target: [0, 1.6, 0.05], distance: 0.9 }, metrics: ['disc', 'acuity'],
   },
   immune: {
     id: 'immune', name: 'Immune',
@@ -192,7 +192,7 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
       critical: 'Blood counts are well outside range. Act now.',
     },
     actions: ['IMM-SAMPLE', 'EARTH-PACKET'], hotspot: [-0.2, 1.42, 0.08],
-    focus: { target: [-0.05, 1.3, 0], distance: 2.7 }, metrics: ['wbc', 'lymph'],
+    focus: { target: [0, 1.4, 0.03], distance: 1.5 }, metrics: ['wbc', 'lymph'],
   },
   nutrition: {
     id: 'nutrition', name: 'Nutrition',
@@ -203,7 +203,7 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
       critical: 'Nutrition is well short of need. Act now.',
     },
     actions: ['NUT-CAL', 'NUT-D'], hotspot: [0.07, 1.1, 0.14],
-    focus: { target: [0, 1.1, 0], distance: 2.7 }, metrics: ['energy', 'mass', 'glucose'],
+    focus: { target: [0, 1.07, 0.04], distance: 1.9 }, metrics: ['energy', 'mass', 'glucose'],
   },
   behavior: {
     id: 'behavior', name: 'Sleep & behavior',
@@ -214,7 +214,7 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
       critical: 'Sleep is far below plan and affecting work. Act now.',
     },
     actions: ['SLP-EXT', 'SLP-LIGHT'], hotspot: [-0.13, 1.75, 0.05],
-    focus: { target: [0, 1.68, 0], distance: 2.1 }, metrics: ['sleep', 'cognition', 'mood'],
+    focus: { target: [0, 1.6, 0], distance: 1.55 }, metrics: ['sleep', 'cognition', 'mood'],
   },
   radiation: {
     id: 'radiation', name: 'Radiation',
@@ -225,7 +225,7 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
       critical: 'A solar particle event is under way. Move to the storm shelter.',
     },
     actions: ['RAD-REVIEW', 'EARTH-PACKET'], hotspot: [0.4, 1.15, 0],
-    focus: { target: [0, 0.95, 0], distance: 3.8 }, metrics: ['mission_dose', 'career_dose', 'space_weather'],
+    focus: { target: [0, 0.97, 0], distance: 4.7 }, metrics: ['mission_dose', 'career_dose', 'space_weather'],
   },
 }
 

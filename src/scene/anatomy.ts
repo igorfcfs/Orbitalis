@@ -5,8 +5,9 @@ import type { LayerId } from '../state/store'
 import type { SystemId } from '../types'
 
 /**
- * Modelo anatômico: Shandon's Body Atlas (Z-Anatomy, CC BY-SA 4.0), seis GLB com meshopt.
+ * Anatomia interna: Shandon's Body Atlas (Z-Anatomy, CC BY-SA 4.0), GLB com meshopt.
  * Os arquivos ficam em /public/models (cópia local, conforme o plano de risco da spec).
+ * A pele vem de bodyBuild.ts; aqui ficam as camadas que aparecem quando o corpo se abre.
  */
 export const ANATOMY_BASE = '/models/'
 
@@ -24,18 +25,17 @@ export interface LayerInfo {
 }
 
 export const LAYERS: LayerInfo[] = [
-  { id: 'skin', label: 'Skin', file: 'skin.glb', blurb: 'Body surface', color: '#9fb3d9', renderOrder: 6 },
-  { id: 'muscles', label: 'Muscles', file: 'muscles.glb', blurb: 'Skeletal muscles', color: '#6f84ad', renderOrder: 5 },
-  { id: 'skeleton', label: 'Skeleton', file: 'skeleton.glb', blurb: 'Bones, joints, ligaments', color: '#b4c2de', renderOrder: 4 },
-  { id: 'organs', label: 'Organs', file: 'organs.glb', blurb: 'Internal organs, including the heart', color: '#8ea3c9', renderOrder: 3 },
-  { id: 'vessels', label: 'Circulation', file: 'vessels.glb', blurb: 'Arteries, veins, lymphatics', color: '#7f98c6', renderOrder: 2 },
-  { id: 'nerves', label: 'Nerves', file: 'nerves.glb', blurb: 'Brain, nerves, eyes', color: '#a9b8d8', renderOrder: 1 },
+  { id: 'muscles', label: 'Muscles', file: 'muscles.glb', blurb: 'Skeletal muscles', color: '#8a6f78', renderOrder: 5 },
+  { id: 'skeleton', label: 'Skeleton', file: 'skeleton.glb', blurb: 'Bones, joints, ligaments', color: '#d6dbe8', renderOrder: 4 },
+  { id: 'organs', label: 'Organs', file: 'organs.glb', blurb: 'Internal organs, including the heart', color: '#a78d97', renderOrder: 3 },
+  { id: 'vessels', label: 'Circulation', file: 'vessels.glb', blurb: 'Arteries, veins, lymphatics', color: '#8aa0d0', renderOrder: 2 },
+  { id: 'nerves', label: 'Nerves', file: 'nerves.glb', blurb: 'Brain and nerves', color: '#c3b6a2', renderOrder: 1 },
 ]
 
-/** Camadas que carregam logo ao abrir o corpo. As demais carregam sob demanda. */
-export const INITIAL_LAYERS: LayerId[] = ['skin', 'skeleton', 'organs']
+/** Camadas que carregam em segundo plano ao abrir um corpo (raio-X). As demais, sob demanda. */
+export const INITIAL_LAYERS: LayerId[] = ['skeleton', 'organs']
 
-/** Camadas que cada sistema precisa ver para ser explicado. */
+/** Camadas que cada sistema mostra ao abrir a região. */
 export const SYSTEM_LAYERS: Record<SystemId, LayerId[]> = {
   cardiovascular: ['organs', 'vessels'],
   skeletal: ['skeleton'],
@@ -49,8 +49,11 @@ export const SYSTEM_LAYERS: Record<SystemId, LayerId[]> = {
 
 type SysKey = Exclude<SystemId, 'radiation'>
 
+// O corpo é sempre vestido: sem genitais. Os olhos vêm do personagem, não do atlas.
+const SKIP = /penis|testis|epididymis|seminal|prostate|ductus deferens|ejaculatory|corpus cavernosum|corpus spongiosum|glans|scrot|eyeball|sclera|\biris\b|cornea|\blens\b|vitreous|choroid|ciliary|^retina/i
+
 const RE = {
-  eye: /eyeball|\biris\b|sclera|retina|optic|lens|cornea|vitreous|choroid|ciliary/i,
+  eye: /optic|retinal/i,
   brain: /brain|cerebr|cerebell|midbrain|\bpons\b|medulla|gyrus|thalam|hippocamp|amygdal|callos|caudate|putamen|pallid|nucleus|insula|cortex|lobe|ventricle|aqueduct|colliculus|peduncle|lingula|tonsil of cerebellum|basal ganglia|fornix|septum pellucidum/i,
   heartOrgan: /atrium|ventricle|papillary|leaflet|valve|coronary|chordae|septum/i,
   nodes: /nodes?\b|thymus|splen|tonsil|lymph/i,
@@ -58,8 +61,8 @@ const RE = {
 }
 
 /** Primeiro casamento vence. 'rest' = camada neutra sem sistema. */
-export function classify(layer: LayerId, name: string): SysKey | 'rest' {
-  if (layer === 'skin') return 'rest'
+export function classify(layer: LayerId, rawName: string): SysKey | 'rest' {
+  const name = rawName.replace(/_/g, ' ')
   if (layer === 'skeleton') return 'skeletal'
   if (layer === 'muscles') return 'muscular'
   if (layer === 'nerves') {
@@ -72,20 +75,9 @@ export function classify(layer: LayerId, name: string): SysKey | 'rest' {
     if (RE.gut.test(name)) return 'nutrition'
     return 'rest'
   }
-  // vessels
-  if (RE.eye.test(name) || /retinal/i.test(name)) return 'neuro_ocular'
+  if (RE.eye.test(name)) return 'neuro_ocular'
   if (RE.nodes.test(name)) return 'immune'
   return 'cardiovascular'
-}
-
-const ANCHORS: Record<SysKey, { layer: LayerId; re: RegExp }> = {
-  cardiovascular: { layer: 'organs', re: /atrium|ventricle/i },
-  skeletal: { layer: 'skeleton', re: /hip bone|sacrum/i },
-  muscular: { layer: 'muscles', re: /(vastus lateralis|rectus femoris) muscle R$/i },
-  neuro_ocular: { layer: 'nerves', re: /eyeball|\biris\b|sclera/i },
-  behavior: { layer: 'nerves', re: /gyrus/i },
-  immune: { layer: 'vessels', re: /thymus/i },
-  nutrition: { layer: 'organs', re: /stomach|liver/i },
 }
 
 export interface Bucket {
@@ -97,13 +89,8 @@ export interface Bucket {
 export interface LoadedLayer {
   id: LayerId
   buckets: Bucket[]
-  /** Contagem de estruturas por sistema, para o log do console */
   matched: Record<string, number>
   triangles: number
-  anchors: Partial<Record<SysKey, THREE.Box3>>
-  /** Posição média das estruturas de referência para detectar a frente do corpo */
-  frontProbe?: { front: THREE.Vector3; back: THREE.Vector3 }
-  bounds: THREE.Box3
 }
 
 interface Acc {
@@ -115,17 +102,12 @@ interface Acc {
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
 
-/** Funde todas as malhas de um bucket em uma só geometria no espaço do mundo (poucos draw calls). */
+/** Funde as malhas de cada sistema em uma só geometria no espaço do modelo (poucos draw calls). */
 function bake(root: THREE.Object3D, layer: LayerId): Omit<LoadedLayer, 'id'> {
   root.updateMatrixWorld(true)
   const accs = new Map<string, Acc>()
   const matched: Record<string, number> = {}
-  const anchors: LoadedLayer['anchors'] = {}
-  const bounds = new THREE.Box3()
-  const sternum = new THREE.Box3()
-  const spine = new THREE.Box3()
   const v = new THREE.Vector3()
-  const box = new THREE.Box3()
   let triangles = 0
 
   root.traverse((o) => {
@@ -134,7 +116,8 @@ function bake(root: THREE.Object3D, layer: LayerId): Omit<LoadedLayer, 'id'> {
     const g = mesh.geometry
     const posA = g.getAttribute('position')
     if (!posA) return
-    const name = `${mesh.name} ${mesh.parent?.name ?? ''}`.trim()
+    const name = `${mesh.name} ${mesh.parent?.name ?? ''}`.replace(/_/g, ' ').trim()
+    if (SKIP.test(name)) return
     const key = classify(layer, name)
     matched[key] = (matched[key] ?? 0) + 1
 
@@ -164,18 +147,6 @@ function bake(root: THREE.Object3D, layer: LayerId): Omit<LoadedLayer, 'id'> {
     if (m.determinant() < 0) for (let i = 0; i + 2 < idx.length; i += 3) [idx[i + 1], idx[i + 2]] = [idx[i + 2], idx[i + 1]]
     triangles += idx.length / 3
 
-    box.makeEmpty()
-    for (let i = 0; i < n; i++) box.expandByPoint(v.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]))
-    bounds.union(box)
-
-    for (const [sys, a] of Object.entries(ANCHORS) as [SysKey, { layer: LayerId; re: RegExp }][]) {
-      if (a.layer === layer && a.re.test(name)) (anchors[sys] ??= new THREE.Box3()).union(box)
-    }
-    if (layer === 'skeleton') {
-      if (/sternum|manubrium/i.test(name)) sternum.union(box)
-      if (/thoracic vertebra|vertebra T/i.test(name)) spine.union(box)
-    }
-
     const acc = accs.get(key) ?? { pos: [], nor: [], idx: [], vcount: 0 }
     const offset = acc.vcount
     if (offset) for (let i = 0; i < idx.length; i++) idx[i] += offset
@@ -196,16 +167,11 @@ function bake(root: THREE.Object3D, layer: LayerId): Omit<LoadedLayer, 'id'> {
     buckets.push({ layer, system: key as Bucket['system'], geometry })
   }
 
-  // Libera as malhas originais (dispose)
   root.traverse((o) => {
     const mesh = o as THREE.Mesh
     if (mesh.isMesh) mesh.geometry.dispose()
   })
-
-  const frontProbe = !sternum.isEmpty() && !spine.isEmpty()
-    ? { front: sternum.getCenter(new THREE.Vector3()), back: spine.getCenter(new THREE.Vector3()) }
-    : undefined
-  return { buckets, matched, triangles, anchors, frontProbe, bounds }
+  return { buckets, matched, triangles }
 }
 
 function concat(list: Float32Array[]) {
@@ -238,43 +204,4 @@ export function loadLayer(id: LayerId): Promise<LoadedLayer> {
     promises.set(id, p)
   }
   return p
-}
-
-export interface Normalization {
-  matrix: THREE.Matrix4
-  scale: number
-  rotationY: number
-  height: number
-}
-
-/**
- * Mesma transformação para todas as camadas: altura 1.80, pés em y=0, centrado,
- * olhando para +z. A frente vem da posição do esterno em relação às vértebras torácicas.
- */
-export function normalize(skin: LoadedLayer, skeleton?: LoadedLayer): Normalization {
-  const { min, max } = skin.bounds
-  const height = max.y - min.y
-  const scale = 1.8 / height
-  let rotationY = 0
-  const probe = skeleton?.frontProbe
-  if (probe && probe.front.z < probe.back.z) rotationY = Math.PI
-  const cx = (min.x + max.x) / 2
-  const cz = (min.z + max.z) / 2
-  const matrix = new THREE.Matrix4()
-    .makeRotationY(rotationY)
-    .multiply(new THREE.Matrix4().makeScale(scale, scale, scale))
-    .multiply(new THREE.Matrix4().makeTranslation(-cx, -min.y, -cz))
-  return { matrix, scale, rotationY, height }
-}
-
-/** Centro anatômico de cada sistema no espaço normalizado, quando a camada de referência existe. */
-export function anchorPositions(layers: LoadedLayer[], norm: Normalization): Partial<Record<SystemId, [number, number, number]>> {
-  const out: Partial<Record<SystemId, [number, number, number]>> = {}
-  for (const l of layers) {
-    for (const [sys, box] of Object.entries(l.anchors) as [SysKey, THREE.Box3][]) {
-      const c = box.getCenter(new THREE.Vector3()).applyMatrix4(norm.matrix)
-      out[sys] = [c.x, c.y, c.z]
-    }
-  }
-  return out
 }

@@ -110,12 +110,24 @@ export interface MetricOverride {
   lastTaken?: number
 }
 
+/** Aparência do astronauta fictício (cores e corpo-base). */
+export interface Look {
+  skin: string
+  hair: string
+  eyes: string
+  /** Corpo-base do atlas é masculino; 'female' aplica uma deformação de proporções. */
+  build: 'male' | 'female'
+  /** Cor de acento do uniforme (nunca verde, âmbar ou vermelho) */
+  accent: string
+}
+
 export interface Astronaut {
   id: string
   initials: string
   name: string
   role: string
   isCMO?: boolean
+  look: Look
   heightM: number
   tempBaseline: number
   tempNow: number
@@ -147,6 +159,8 @@ export interface Decision {
 export interface Sim {
   day: number
   solar: boolean
+  /** Traje de EVA vestido: fora do habitat, só o traje blinda */
+  suit: boolean
   link: 'delayed' | 'blackout'
   measurements: Measurement[]
 }
@@ -171,4 +185,6 @@ export interface ResolvedMetric extends MetricDef {
   points: Point[]
   eval: Evaluation
   status: Status
+  /** Taxa de dose atual (mSv/dia), só nas métricas de dose */
+  rate?: number
 }

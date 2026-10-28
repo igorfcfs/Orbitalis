@@ -35,11 +35,11 @@ export function projectionWindow(points: Point[], mode: 'continuous' | 'periodic
 export const HORIZON_DAYS = 30
 
 /** Valor projetado `HORIZON_DAYS` dias após o último ponto. */
-export function project(points: Point[], mode: 'continuous' | 'periodic', fromDay: number) {
+export function project(points: Point[], mode: 'continuous' | 'periodic', fromDay: number, slopeOverride?: number) {
   const window = projectionWindow(points, mode)
-  const r = regress(window)
+  const slope = slopeOverride ?? regress(window).slope
   const lastValue = points[points.length - 1]?.value ?? 0
-  return { slope: r.slope, projected: lastValue + r.slope * (HORIZON_DAYS + (fromDay - (points[points.length - 1]?.day ?? fromDay))) }
+  return { slope, projected: lastValue + slope * (HORIZON_DAYS + (fromDay - (points[points.length - 1]?.day ?? fromDay))) }
 }
 
 /** Dias até cruzar `limit`, ou null se a tendência não cruza. */

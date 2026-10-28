@@ -15,6 +15,8 @@ export interface MetricInput {
   points: Point[]
   day: number
   cadence: Cadence
+  /** Taxa conhecida (ex.: dose/dia na exposição atual). Substitui a regressão na projeção. */
+  rate?: number
 }
 
 /**
@@ -33,7 +35,7 @@ export function evaluateMetric(rule: Rule, m: MetricInput): Evaluation {
     const limit = rule.limit
     const margin = rule.margin ?? 0
     const slack = dir === 'min' ? value - limit : limit - value
-    const { slope, projected } = project(m.points, m.cadence.mode, m.day)
+    const { slope, projected } = project(m.points, m.cadence.mode, m.day, m.rate)
     const daysToLimit = daysToCross(value, slope, limit, dir)
     const base = { slope, projected, daysToLimit }
     const sign = dir === 'min' ? '≥' : '<'

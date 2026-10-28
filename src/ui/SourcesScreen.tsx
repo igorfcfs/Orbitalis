@@ -34,8 +34,8 @@ const COVERAGE: { id: string; text: string; where: string }[] = [
   { id: 'RF-10', text: 'Plain-language mechanism', where: 'System details and Metric facts' },
   { id: 'RF-11', text: 'How and why to take each measurement', where: 'Log screen' },
   { id: 'RF-12', text: 'Evolution chart per indicator', where: 'Metric screen' },
-  { id: 'RF-13', text: 'Autonomous mode by default, with blackout simulation', where: 'Top bar and Simulation menu' },
-  { id: 'RF-14', text: 'Clickable body map', where: 'Body screen hotspots' },
+  { id: 'RF-13', text: 'Autonomous mode by default, with blackout simulation', where: 'Link chip and Menu → Simulation' },
+  { id: 'RF-14', text: 'Clickable body map', where: 'Click any region of the 3D body' },
   { id: 'RF-15', text: 'Flag what goes to the flight surgeon', where: 'Metric → Flag, and the Packet screen' },
 ]
 
@@ -111,6 +111,8 @@ export function SourcesScreen() {
             <li>The crew is fictional. Apart from the calibrations above, all physiological signals are synthetic and illustrative.</li>
             <li>Status is computed by deterministic code and never by AI. This build makes no model calls; explanations are fixed catalog text, marked “Offline explanation”.</li>
             <li>Actions come from a closed catalog. The app gives no diagnosis, medication or dose.</li>
+            <li>Prototype assumption, not a published value: outside the hull only the EVA suit shields you, modeled as twice the 1.8 mSv/day measured inside a spacecraft. Replace it with the mission’s own dosimetry.</li>
+            <li>The characters, their hair, eyes, skin and uniforms, the suit and the habitat are drawn for this prototype. The anatomical body is a male atlas model; two crew members use adjusted proportions.</li>
             <li>{ATTRIBUTION}</li>
           </ul>
         </section>

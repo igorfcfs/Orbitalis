@@ -9,7 +9,7 @@ import type { Sim, Status, SystemId } from '../types'
 import { evaluateMetric } from './status'
 import { regress } from './projection'
 
-const sim: Sim = { day: 142, solar: false, link: 'delayed', measurements: [] }
+const sim: Sim = { day: 142, solar: false, suit: false, link: 'delayed', measurements: [] }
 
 const base = { baseline: 100, unit: '%', decimals: 1, day: 142, cadence: { mode: 'continuous' as const, step: 2, plausible: [0, 1000] as [number, number] } }
 const line = (from: number, slope: number, n = 8) =>
@@ -116,5 +116,25 @@ describe('medição do astronauta recalcula o status', () => {
   it('lymphocytes normalizados saem de WATCH', () => {
     const s: Sim = { ...sim, measurements: [{ astronautId: 'daniel', metric: 'lymph', day: 142, value: 1.6, ts: '' }] }
     expect(resolveMetric(byId.daniel, 'lymph', s).status).toBe('nominal')
+  })
+})
+
+describe('traje de EVA e dose de radiação', () => {
+  const suited: Sim = { ...sim, suit: true }
+  it('a taxa de dose sobe fora do casco e a projeção acompanha', async () => {
+    const { doseRate, SUIT_SHIELD_FACTOR, CRUISE_DOSE_RATE } = await import('../lib/model')
+    expect(doseRate(sim)).toBe(CRUISE_DOSE_RATE)
+    expect(doseRate(suited)).toBe(CRUISE_DOSE_RATE * SUIT_SHIELD_FACTOR)
+    const a = resolveMetric(byId.rafael, 'career_dose', sim)
+    const b = resolveMetric(byId.rafael, 'career_dose', suited)
+    expect(b.eval.projected!).toBeGreaterThan(a.eval.projected!)
+    expect(b.eval.daysToLimit!).toBeLessThan(a.eval.daysToLimit!)
+    expect(b.value).toBe(a.value) // o que já foi absorvido não muda
+  })
+  it('com o traje, quem já está perto do limite continua em WATCH', () => {
+    expect(resolveMetric(byId.lena, 'career_dose', suited).status).toBe('watch')
+  })
+  it('o traje não altera métricas que não são de dose', () => {
+    expect(resolveMetric(byId.aiko, 'sleep', suited).status).toBe(resolveMetric(byId.aiko, 'sleep', sim).status)
   })
 })
