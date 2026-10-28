@@ -1,0 +1,110 @@
+{
+  "layers": [
+    {
+      "id": "skin",
+      "label": "Skin",
+      "file": "skin.glb",
+      "renderOrder": 6,
+      "defaultVisible": true,
+      "defaultOpacity": 0.35,
+      "roughness": 0.55,
+      "fallbackColor": "#D9A183"
+    },
+    {
+      "id": "muscles",
+      "label": "Muscles",
+      "file": "muscles.glb",
+      "renderOrder": 5,
+      "defaultVisible": false,
+      "defaultOpacity": 1.0,
+      "roughness": 0.4,
+      "fallbackColor": "#9E3B32"
+    },
+    {
+      "id": "skeleton",
+      "label": "Skeleton",
+      "file": "skeleton.glb",
+      "renderOrder": 4,
+      "defaultVisible": true,
+      "defaultOpacity": 1.0,
+      "roughness": 0.5,
+      "fallbackColor": "#E9E1CE"
+    },
+    {
+      "id": "organs",
+      "label": "Organs",
+      "file": "organs.glb",
+      "renderOrder": 3,
+      "defaultVisible": true,
+      "defaultOpacity": 1.0,
+      "roughness": 0.35,
+      "fallbackColor": "#C98878"
+    },
+    {
+      "id": "vessels",
+      "label": "Circulation",
+      "file": "vessels.glb",
+      "renderOrder": 2,
+      "defaultVisible": false,
+      "defaultOpacity": 1.0,
+      "roughness": 0.4,
+      "fallbackColor": "#B03A32"
+    },
+    {
+      "id": "nerves",
+      "label": "Nerves",
+      "file": "nerves.glb",
+      "renderOrder": 1,
+      "defaultVisible": false,
+      "defaultOpacity": 1.0,
+      "roughness": 0.5,
+      "fallbackColor": "#D9B159"
+    }
+  ],
+  "layerBlurbs": {
+    "skin": "Body surface, mapped as named anatomical regions.",
+    "muscles": "Skeletal muscles of the muscular system.",
+    "skeleton": "Bones, joints, and ligaments.",
+    "organs": "Internal organs of the visceral systems, including the heart.",
+    "vessels": "Arteries, veins, and lymphatic vessels and nodes.",
+    "nerves": "Central and peripheral nervous system with sense organs."
+  },
+  "descriptions": {
+    "Liver": "The body's largest internal organ. It filters blood, produces bile for digestion, and stores energy as glycogen.",
+    "Stomach": "A muscular sac that churns food with acid and enzymes, beginning protein digestion.",
+    "Kidney": "Filters waste from the blood to produce urine, and regulates fluid, salts, and blood pressure.",
+    "Pancreas": "Produces digestive enzymes and the hormones insulin and glucagon that control blood sugar.",
+    "Gallbladder": "Stores and concentrates bile from the liver, releasing it to digest fats.",
+    "Urinary bladder": "A stretchable muscular reservoir that stores urine before it leaves the body.",
+    "Trachea": "The windpipe \u2014 a cartilage-ringed airway carrying air between the larynx and the bronchi.",
+    "Left ventricle": "The heart's strongest chamber. It pumps oxygen-rich blood through the aorta to the whole body.",
+    "Right ventricle": "Pumps oxygen-poor blood through the pulmonary trunk to the lungs.",
+    "Left atrium": "Receives oxygen-rich blood returning from the lungs and passes it to the left ventricle.",
+    "Right atrium": "Receives oxygen-poor blood from the body via the great veins.",
+    "Thyroid gland": "A butterfly-shaped gland in the neck that sets the body's metabolic rate.",
+    "Prostate": "A gland surrounding the urethra that produces part of the seminal fluid.",
+    "Spleen": "Filters blood, recycles old red blood cells, and helps fight infection.",
+    "Duodenum": "The first section of the small intestine, where stomach contents meet bile and pancreatic enzymes.",
+    "Jejunum": "The middle section of the small intestine, where most nutrients are absorbed.",
+    "Oesophagus": "A muscular tube that carries swallowed food from the throat to the stomach.",
+    "Tongue": "A muscular organ for taste, chewing, swallowing, and speech.",
+    "Femur": "The thigh bone \u2014 the longest and strongest bone in the human body.",
+    "Humerus": "The upper-arm bone, connecting the shoulder to the elbow.",
+    "Sternum": "The breastbone, anchoring the ribs and protecting the heart and lungs.",
+    "Clavicle": "The collarbone, strutting the shoulder away from the ribcage.",
+    "Scapula": "The shoulder blade \u2014 a flat triangular bone gliding over the back of the ribcage.",
+    "Atlas (C1)": "The first cervical vertebra. It carries the skull and lets you nod your head.",
+    "Axis (C2)": "The second cervical vertebra. Its peg lets the atlas pivot, turning the head.",
+    "Corpus callosum": "The great bridge of nerve fibres connecting the brain's two hemispheres.",
+    "Abdominal aorta": "The body's largest artery as it descends through the abdomen, supplying the organs and legs.",
+    "Pulmonary trunk": "The great artery carrying oxygen-poor blood from the right ventricle toward the lungs.",
+    "Superior lobe of left lung": "One of the left lung's two lobes, where inhaled air exchanges oxygen with the blood.",
+    "Superior lobe of right lung": "The uppermost of the right lung's three lobes.",
+    "Vermiform appendix": "A small blind-ended tube off the caecum; a reservoir of gut flora with immune tissue.",
+    "Sartorius": "The longest muscle in the body, crossing hip and knee to fold the legs tailor-style.",
+    "Biceps brachii": "The two-headed flexor of the elbow on the front of the upper arm.",
+    "Rectus abdominis": "The paired 'six-pack' muscle flexing the trunk forward.",
+    "Gluteus maximus": "The body's largest muscle, extending the hip in stair-climbing and standing up."
+  },
+  "attribution": "Model data: Z-Anatomy \u2014 the libre 3D atlas of anatomy (CC-BY-SA 4.0), derived from BodyParts3D \u00a9 The Database Center for Life Science."
+}
