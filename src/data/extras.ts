@@ -35,5 +35,5 @@ export const EXTRA_SYSTEM: Record<SystemId, SystemExtra> = {
   immune: { region: 'Lymph nodes and spleen', hotspotOffset: [-0.04, 0, 0.1], evidence: 'Blood counts come from the Bio-Analyzer, which returns cell counts on board in 2–3 hours. Reference ranges are terrestrial, and labeled as such.' },
   nutrition: { region: 'Digestive tract', hotspotOffset: [0.05, 0, 0.1], evidence: 'Energy intake has its own requirement, NASA-STD-3001 [V1 4020]. Nutrition is a red risk in the Human Research Program.' },
   behavior: { region: 'Brain', hotspotOffset: [-0.07, 0.07, 0.04], evidence: 'Behavioral health and performance is a red risk in the Human Research Program. Cognition is tracked with the same test battery flown on the ISS.' },
-  radiation: { region: 'Whole body, aura', hotspotOffset: [0, 0, 0], evidence: 'The RAD instrument measured 1.8 mSv/day on the Mars Science Laboratory cruise (SwRI). Career dose is limited by NASA-STD-3001 [V1 4030].' },
+  radiation: { region: 'Whole body', hotspotOffset: [0, 0, 0], evidence: 'The RAD instrument measured 1.8 mSv/day on the Mars Science Laboratory cruise (SwRI). Career dose is limited by NASA-STD-3001 [V1 4030].' },
 }
