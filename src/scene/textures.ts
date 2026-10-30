@@ -67,27 +67,31 @@ export function glowTexture() {
   return glow
 }
 
+let contact: THREE.CanvasTexture | null = null
+/** Sombra de contato: mancha escura que some devagar até a borda, sem contorno (curva gaussiana). */
+export function contactShadowTexture() {
+  if (contact) return contact
+  const { c, g } = canvas(128, 128)
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64)
+  for (let i = 0; i <= 10; i++) {
+    const t = i / 10
+    grad.addColorStop(t, `rgba(255,255,255,${Math.exp(-t * t * 5.2).toFixed(4)})`)
+  }
+  grad.addColorStop(1, 'rgba(255,255,255,0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 128, 128)
+  contact = tex(c, false)
+  return contact
+}
+
 let stars: THREE.CanvasTexture | null = null
 export function starTexture() {
   if (stars) return stars
   const W = 2048, H = 1024
   const { c, g } = canvas(W, H)
-  g.fillStyle = '#02030a'
-  g.fillRect(0, 0, W, H)
+  // Só estrelas nítidas, por cima da imagem real da Via Láctea (a faixa vem do mapa, não daqui)
+  g.clearRect(0, 0, W, H)
   const r = rng(7)
-  // Faixa da Via Láctea: manchas suaves ao longo de uma curva
-  for (let i = 0; i < 520; i++) {
-    const t = r()
-    const x = t * W
-    const y = H * (0.5 + 0.18 * Math.sin(t * 6.1 + 0.8) + (r() - 0.5) * 0.16)
-    const rad = 40 + r() * 120
-    const grad = g.createRadialGradient(x, y, 0, x, y, rad)
-    const warm = r() > 0.6
-    grad.addColorStop(0, warm ? 'rgba(120,90,150,0.07)' : 'rgba(80,110,190,0.06)')
-    grad.addColorStop(1, 'rgba(0,0,0,0)')
-    g.fillStyle = grad
-    g.fillRect(x - rad, y - rad, rad * 2, rad * 2)
-  }
   for (let i = 0; i < 5200; i++) {
     const x = r() * W, y = r() * H
     const b = Math.pow(r(), 3)
@@ -229,10 +233,10 @@ export function eyeTexture(iris: string) {
   if (hit) return hit
   const W = 1024, H = 512
   const { c, g } = canvas(W, H)
-  g.fillStyle = '#ece6de'
+  g.fillStyle = '#ebe7e2'
   g.fillRect(0, 0, W, H)
   const r = rng(3)
-  g.strokeStyle = 'rgba(196,92,84,0.22)'
+  g.strokeStyle = 'rgba(196,92,84,0.12)'
   g.lineWidth = 1.2
   for (let i = 0; i < 60; i++) {
     const x = r() * W, y = H * (0.18 + r() * 0.64)
@@ -241,16 +245,18 @@ export function eyeTexture(iris: string) {
     g.bezierCurveTo(x + 20, y + (r() - 0.5) * 30, x + 40, y + (r() - 0.5) * 30, x + 60 + r() * 30, y + (r() - 0.5) * 20)
     g.stroke()
   }
-  const cx = W * 0.25, cy = H * 0.5, R = 82
+  const cx = W * 0.25, cy = H * 0.5, R = 96
   const limbal = g.createRadialGradient(cx, cy, R * 0.85, cx, cy, R * 1.12)
   limbal.addColorStop(0, 'rgba(20,14,10,0.95)')
   limbal.addColorStop(1, 'rgba(20,14,10,0)')
   g.fillStyle = limbal
   g.beginPath(); g.arc(cx, cy, R * 1.12, 0, Math.PI * 2); g.fill()
-  const col = new THREE.Color(iris)
-  const base = `rgb(${Math.round(col.r * 255)},${Math.round(col.g * 255)},${Math.round(col.b * 255)})`
-  const dark = `rgb(${Math.round(col.r * 120)},${Math.round(col.g * 120)},${Math.round(col.b * 120)})`
-  const light = `rgb(${Math.min(255, Math.round(col.r * 255 * 1.6 + 25))},${Math.min(255, Math.round(col.g * 255 * 1.6 + 25))},${Math.min(255, Math.round(col.b * 255 * 1.6 + 25))})`
+  // A cor vem em sRGB (a textura também): usar os valores lineares do THREE.Color escurecia e saturava a íris
+  const hex = new THREE.Color(iris).getHex(THREE.SRGBColorSpace)
+  const cr = (hex >> 16) & 255, cg = (hex >> 8) & 255, cb = hex & 255
+  const base = `rgb(${cr},${cg},${cb})`
+  const dark = `rgb(${Math.round(cr * 0.5)},${Math.round(cg * 0.5)},${Math.round(cb * 0.5)})`
+  const light = `rgb(${Math.min(255, Math.round(cr * 1.28 + 14))},${Math.min(255, Math.round(cg * 1.28 + 14))},${Math.min(255, Math.round(cb * 1.28 + 14))})`
   const gi = g.createRadialGradient(cx, cy, R * 0.25, cx, cy, R)
   gi.addColorStop(0, light)
   gi.addColorStop(0.55, base)
@@ -268,6 +274,29 @@ export function eyeTexture(iris: string) {
   }
   g.fillStyle = '#050305'
   g.beginPath(); g.arc(cx, cy, R * 0.36, 0, Math.PI * 2); g.fill()
+  // Sombra das pálpebras e dos cantos: o globo fica dentro da órbita, não colado por cima do rosto
+  const shade = 'rgba(32,18,14,'
+  const up = g.createLinearGradient(0, H * 0.3, 0, H * 0.5)
+  up.addColorStop(0, shade + '0.8)'); up.addColorStop(0.6, shade + '0.34)'); up.addColorStop(1, shade + '0)')
+  g.fillStyle = up
+  g.fillRect(0, H * 0.3, W, H * 0.2)
+  g.fillStyle = shade + '0.85)'
+  g.fillRect(0, 0, W, H * 0.3)
+  const dn = g.createLinearGradient(0, H * 0.5, 0, H * 0.68)
+  dn.addColorStop(0, shade + '0)'); dn.addColorStop(1, shade + '0.5)')
+  g.fillStyle = dn
+  g.fillRect(0, H * 0.5, W, H * 0.18)
+  g.fillStyle = shade + '0.7)'
+  g.fillRect(0, H * 0.68, W, H * 0.32)
+  for (const s of [1, -1]) {
+    const cg = g.createLinearGradient(cx + s * W * 0.075, 0, cx + s * W * 0.16, 0)
+    cg.addColorStop(0, shade + '0)'); cg.addColorStop(1, shade + '0.62)')
+    g.fillStyle = cg
+    g.fillRect(s > 0 ? cx + W * 0.075 : cx - W * 0.16, 0, W * 0.085, H)
+  }
+  g.fillStyle = shade + '0.8)'
+  g.fillRect(cx + W * 0.16, 0, W, H)
+  g.fillRect(0, 0, cx - W * 0.16, H)
   const t = tex(c)
   eyeCache.set(iris, t)
   return t
@@ -337,4 +366,376 @@ export function solarTexture() {
   solar = tex(c)
   solar.wrapS = solar.wrapT = THREE.RepeatWrapping
   return solar
+}
+
+// ---------- Detalhes de superfície do ambiente ----------
+
+/** Ruído em tons de cinza para bump de tinta e borracha. */
+export function noiseBump(seed = 5, size = 256) {
+  const { c, g } = canvas(size, size)
+  const img = g.createImageData(size, size)
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const v = fbm(x / 22 + seed, y / 22, seed * 0.37, 4) * 0.7 + hash3(x, y, seed) * 0.3
+      const o = (y * size + x) * 4
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = Math.round(v * 255)
+      img.data[o + 3] = 255
+    }
+  }
+  g.putImageData(img, 0, 0)
+  const t = tex(c, false)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
+/** Folha de isolamento térmico dourada: dobras irregulares. */
+export function crinkleBump() {
+  const size = 256
+  const { c, g } = canvas(size, size)
+  const img = g.createImageData(size, size)
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const a = fbm(x / 9, y / 9, 1.3, 4)
+      const b = Math.abs(fbm(x / 26 + 8, y / 26, 4.1, 3) - 0.5) * 2
+      const v = Math.min(1, a * 0.65 + b * 0.5)
+      const o = (y * size + x) * 4
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = Math.round(v * 255)
+      img.data[o + 3] = 255
+    }
+  }
+  g.putImageData(img, 0, 0)
+  const t = tex(c, false)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
+/** Casco pintado de branco com painéis, costuras e rebites. */
+export function hullTexture() {
+  const S = 1024
+  const { c, g } = canvas(S, S)
+  const r = rng(21)
+  g.fillStyle = '#d9dde4'
+  g.fillRect(0, 0, S, S)
+  for (let i = 0; i < 14000; i++) {
+    g.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '40,50,70'},${r() * 0.035})`
+    g.fillRect(r() * S, r() * S, 1 + r() * 3, 1 + r() * 3)
+  }
+  const cw = 256
+  const ch = 341
+  for (let y = 0; y < S; y += ch) {
+    for (let x = 0; x < S; x += cw) {
+      const tone = 214 + Math.round(r() * 14)
+      g.fillStyle = `rgb(${tone},${tone + 2},${tone + 7})`
+      g.fillRect(x + 3, y + 3, cw - 6, ch - 6)
+      g.strokeStyle = 'rgba(60,70,95,0.55)'
+      g.lineWidth = 2
+      g.strokeRect(x + 1, y + 1, cw - 2, ch - 2)
+      g.fillStyle = 'rgba(90,100,125,0.7)'
+      for (let k = 0; k < 9; k++) {
+        g.beginPath(); g.arc(x + 12 + k * ((cw - 24) / 8), y + 10, 2.2, 0, 7); g.fill()
+        g.beginPath(); g.arc(x + 12 + k * ((cw - 24) / 8), y + ch - 10, 2.2, 0, 7); g.fill()
+      }
+      if (r() > 0.55) {
+        g.fillStyle = 'rgba(25,30,45,0.7)'
+        g.font = '600 15px "JetBrains Mono", monospace'
+        g.fillText(['ORBITALIS', 'NO STEP', 'VENT', 'MED BAY'][Math.floor(r() * 4)], x + 24, y + 56)
+      }
+    }
+  }
+  const t = tex(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+
+/** Tela decorativa de parede: só formas de onda e barras, sem números. */
+export function screenTexture(kind: 'ecg' | 'bars' | 'radar') {
+  const W = 512, H = 320
+  const { c, g } = canvas(W, H)
+  const r = rng(kind === 'ecg' ? 3 : kind === 'bars' ? 9 : 14)
+  g.fillStyle = '#04101f'
+  g.fillRect(0, 0, W, H)
+  g.strokeStyle = 'rgba(110,190,255,0.12)'
+  g.lineWidth = 1
+  for (let x = 0; x <= W; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke() }
+  for (let y = 0; y <= H; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke() }
+  g.shadowColor = '#7fd8ff'
+  g.shadowBlur = 10
+  g.strokeStyle = '#9fe2ff'
+  g.lineWidth = 3
+  if (kind === 'ecg') {
+    g.beginPath()
+    for (let x = 0; x < W; x += 2) {
+      const p = (x % 128) / 128
+      let y = 170
+      if (p > 0.18 && p < 0.22) y -= 20
+      else if (p > 0.3 && p < 0.33) y += 22
+      else if (p > 0.33 && p < 0.37) y -= 96
+      else if (p > 0.37 && p < 0.4) y += 40
+      else if (p > 0.55 && p < 0.65) y -= 22 * Math.sin(((p - 0.55) / 0.1) * Math.PI)
+      y += (r() - 0.5) * 2
+      if (x === 0) g.moveTo(x, y); else g.lineTo(x, y)
+    }
+    g.stroke()
+  } else if (kind === 'bars') {
+    for (let i = 0; i < 18; i++) {
+      const h = 40 + r() * 190
+      g.fillStyle = i % 5 === 0 ? '#cfe9ff' : '#6fb7ee'
+      g.fillRect(24 + i * 26, H - 30 - h, 16, h)
+    }
+  } else {
+    g.beginPath(); g.arc(256, 160, 110, 0, 7); g.stroke()
+    g.beginPath(); g.arc(256, 160, 60, 0, 7); g.stroke()
+    g.beginPath(); g.moveTo(256, 160); g.lineTo(350, 100); g.stroke()
+    for (let i = 0; i < 8; i++) { g.beginPath(); g.arc(150 + r() * 220, 80 + r() * 160, 3, 0, 7); g.fill() }
+  }
+  g.shadowBlur = 0
+  g.fillStyle = 'rgba(190,225,255,0.8)'
+  g.font = '600 15px "JetBrains Mono", monospace'
+  g.fillText(kind === 'ecg' ? 'BIO-MONITOR' : kind === 'bars' ? 'CABIN SYSTEMS' : 'SPACE WEATHER', 20, 28)
+  return tex(c)
+}
+
+/**
+ * Piso de convés: placas de 1 m com juntas, rebites e uma trama antiderrapante.
+ * Devolve a cor e um mapa de relevo (cinza) que combinam.
+ */
+export function deckTextures() {
+  const S = 1024
+  const make = (relief: boolean) => {
+    const { c, g } = canvas(S, S)
+    const r = rng(relief ? 52 : 52)
+    g.fillStyle = relief ? '#9a9a9a' : '#2b313d'
+    g.fillRect(0, 0, S, S)
+    const half = S / 2
+    for (let py = 0; py < 2; py++) {
+      for (let px = 0; px < 2; px++) {
+        const x = px * half
+        const y = py * half
+        // trama antiderrapante em losangos
+        g.save()
+        g.beginPath()
+        g.rect(x + 10, y + 10, half - 20, half - 20)
+        g.clip()
+        g.strokeStyle = relief ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.055)'
+        g.lineWidth = 3
+        for (let k = -half; k < half * 2; k += 14) {
+          g.beginPath(); g.moveTo(x + k, y); g.lineTo(x + k + half, y + half); g.stroke()
+          g.beginPath(); g.moveTo(x + k + half, y); g.lineTo(x + k, y + half); g.stroke()
+        }
+        g.restore()
+        // junta e moldura da placa
+        g.strokeStyle = relief ? '#000000' : 'rgba(0,0,0,0.85)'
+        g.lineWidth = 8
+        g.strokeRect(x + 4, y + 4, half - 8, half - 8)
+        g.strokeStyle = relief ? 'rgba(255,255,255,0.7)' : 'rgba(190,205,235,0.18)'
+        g.lineWidth = 3
+        g.strokeRect(x + 12, y + 12, half - 24, half - 24)
+        // rebites
+        for (const [dx, dy] of [[26, 26], [half - 26, 26], [26, half - 26], [half - 26, half - 26], [half / 2, 26], [half / 2, half - 26]]) {
+          g.fillStyle = relief ? '#ffffff' : 'rgba(170,185,215,0.55)'
+          g.beginPath(); g.arc(x + dx, y + dy, 6, 0, 7); g.fill()
+        }
+      }
+    }
+    // marcas de uso
+    for (let i = 0; i < 260; i++) {
+      g.strokeStyle = relief ? `rgba(0,0,0,${r() * 0.25})` : `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${r() * 0.06})`
+      g.lineWidth = 1 + r() * 2
+      const x = r() * S, y = r() * S
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - 0.5) * 60, y + (r() - 0.5) * 60); g.stroke()
+    }
+    const t = tex(c, !relief)
+    t.wrapS = t.wrapT = THREE.RepeatWrapping
+    t.anisotropy = 16
+    return t
+  }
+  return { map: make(false), bump: make(true) }
+}
+
+// ---------- Interior da estação: painéis de rack e bolsas de estiva ----------
+
+/**
+ * Atlas de 4×4 tiles com detalhes de rack de estação: travas de quarto de volta, grades, plaquetas com texto,
+ * conectores, interruptores e fitas de velcro. Fundo transparente (vai por cima da tinta do painel). Só cinza,
+ * azul e branco, sem verde, âmbar ou vermelho. O relevo sai da luminância da própria imagem.
+ */
+export function rackAtlas() {
+  const T = 512
+  const { c, g } = canvas(T * 4, T * 4)
+  const r = rng(63)
+  const mono = '600 20px "JetBrains Mono", ui-monospace, monospace'
+  const latch = (x: number, y: number, rad = 22) => {
+    const grad = g.createRadialGradient(x - rad * 0.3, y - rad * 0.3, 2, x, y, rad)
+    grad.addColorStop(0, '#f1f3f7')
+    grad.addColorStop(1, '#8b93a3')
+    g.fillStyle = 'rgba(20,24,34,0.55)'
+    g.beginPath(); g.arc(x + 2, y + 3, rad + 3, 0, 7); g.fill()
+    g.fillStyle = grad
+    g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill()
+    g.strokeStyle = 'rgba(20,24,34,0.9)'
+    g.lineWidth = 6
+    g.beginPath(); g.moveTo(x - rad * 0.62, y); g.lineTo(x + rad * 0.62, y); g.stroke()
+  }
+  const screw = (x: number, y: number) => {
+    g.fillStyle = '#aab2c2'
+    g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill()
+    g.strokeStyle = 'rgba(25,30,42,0.85)'
+    g.lineWidth = 2
+    g.beginPath(); g.moveTo(x - 5, y - 2); g.lineTo(x + 5, y + 2); g.stroke()
+  }
+  const plate = (x: number, y: number, w: number, h: number, lines: string[]) => {
+    g.fillStyle = '#eceef2'
+    g.fillRect(x, y, w, h)
+    g.strokeStyle = 'rgba(40,46,60,0.7)'
+    g.lineWidth = 3
+    g.strokeRect(x, y, w, h)
+    g.fillStyle = '#1a1f2c'
+    g.font = mono
+    lines.forEach((t, i) => g.fillText(t, x + 12, y + 28 + i * 26))
+  }
+  const barcode = (x: number, y: number, w: number, h: number) => {
+    g.fillStyle = '#10141d'
+    for (let k = 0; k < w; k += 5) if (r() > 0.45) g.fillRect(x + k, y, 2 + (r() > 0.7 ? 2 : 0), h)
+  }
+  const aoEdge = (ox: number, oy: number) => {
+    for (const [x0, y0, x1, y1] of [[0, 0, 0, 34], [0, T, 0, T - 34], [0, 0, 34, 0], [T, 0, T - 34, 0]] as const) {
+      const grad = g.createLinearGradient(ox + x0, oy + y0, ox + x1, oy + y1)
+      grad.addColorStop(0, 'rgba(8,10,18,0.34)')
+      grad.addColorStop(1, 'rgba(8,10,18,0)')
+      g.fillStyle = grad
+      g.fillRect(ox, oy, T, T)
+    }
+  }
+  const tiles: ((ox: number, oy: number) => void)[] = [
+    // 0: porta de acesso com quatro travas e plaqueta
+    (ox, oy) => {
+      for (const [x, y] of [[54, 54], [458, 54], [54, 458], [458, 458]]) latch(ox + x, oy + y)
+      plate(ox + 138, oy + 196, 236, 100, ['ACCESS 14', 'STOW  LOCKER', 'NO STEP'])
+    },
+    // 1: grade de ventilação
+    (ox, oy) => {
+      g.fillStyle = 'rgba(14,17,26,0.9)'
+      g.fillRect(ox + 70, oy + 86, 372, 220)
+      for (let y = 100; y < 300; y += 22) {
+        g.fillStyle = '#c9ceda'
+        g.fillRect(ox + 78, oy + y, 356, 10)
+      }
+      for (const [x, y] of [[54, 54], [458, 54], [54, 340], [458, 340]]) screw(ox + x, oy + y)
+      plate(ox + 150, oy + 380, 212, 54, ['AIRFLOW  OUT'])
+    },
+    // 2: alça embutida e duas travas
+    (ox, oy) => {
+      latch(ox + 70, oy + 70); latch(ox + 442, oy + 70)
+      g.fillStyle = 'rgba(14,17,26,0.85)'
+      g.beginPath(); g.roundRect(ox + 150, oy + 220, 212, 70, 18); g.fill()
+      g.fillStyle = '#b6bdcb'
+      g.beginPath(); g.roundRect(ox + 166, oy + 232, 180, 22, 11); g.fill()
+      plate(ox + 160, oy + 340, 192, 52, ['PULL TO OPEN'])
+    },
+    // 3: conectores
+    (ox, oy) => {
+      for (let k = 0; k < 3; k++) {
+        const x = ox + 120 + k * 136
+        g.fillStyle = 'rgba(14,17,26,0.95)'
+        g.beginPath(); g.arc(x, oy + 220, 46, 0, 7); g.fill()
+        g.strokeStyle = '#98a1b3'
+        g.lineWidth = 8
+        g.beginPath(); g.arc(x, oy + 220, 46, 0, 7); g.stroke()
+        g.fillStyle = '#6c7487'
+        for (let j = 0; j < 6; j++) { g.beginPath(); g.arc(x + Math.cos(j) * 18, oy + 220 + Math.sin(j) * 18, 4, 0, 7); g.fill() }
+      }
+      plate(ox + 100, oy + 320, 312, 60, ['PORT A   PORT B   PORT C'])
+      screw(ox + 40, oy + 40); screw(ox + 472, oy + 40)
+    },
+    // 4: liso, só parafusos e uma emenda
+    (ox, oy) => {
+      for (let k = 0; k < 6; k++) { screw(ox + 50 + k * 82, oy + 36); screw(ox + 50 + k * 82, oy + 476) }
+      g.fillStyle = 'rgba(10,12,20,0.5)'
+      g.fillRect(ox, oy + 250, T, 4)
+    },
+    // 5: plaqueta grande com código de barras
+    (ox, oy) => {
+      plate(ox + 90, oy + 130, 332, 200, ['RACK  LAB1D6', 'POWER 28 VDC', 'LOCKER 02 / STOWAGE'])
+      barcode(ox + 110, oy + 262, 292, 46)
+      latch(ox + 60, oy + 440); latch(ox + 452, oy + 440)
+    },
+    // 6: interruptores e luzes
+    (ox, oy) => {
+      for (let k = 0; k < 4; k++) {
+        const x = ox + 100 + k * 96
+        g.fillStyle = 'rgba(14,17,26,0.9)'
+        g.fillRect(x - 20, oy + 170, 40, 90)
+        g.fillStyle = '#c4cad6'
+        g.fillRect(x - 8, oy + 180 + (k % 2) * 36, 16, 44)
+      }
+      for (let k = 0; k < 3; k++) {
+        g.fillStyle = k === 1 ? '#9bd0ff' : '#e6ecf7'
+        g.beginPath(); g.arc(ox + 150 + k * 100, oy + 110, 11, 0, 7); g.fill()
+      }
+      plate(ox + 120, oy + 320, 272, 54, ['SYS 1   SYS 2   SYS 3'])
+    },
+    // 7: fitas de velcro e uma trava
+    (ox, oy) => {
+      for (const y of [120, 300]) {
+        g.fillStyle = 'rgba(96,102,116,0.95)'
+        g.fillRect(ox + 60, oy + y, 392, 46)
+        g.fillStyle = 'rgba(40,44,56,0.35)'
+        for (let k = 0; k < 392; k += 6) g.fillRect(ox + 60 + k, oy + y, 2, 46)
+      }
+      latch(ox + 256, oy + 440)
+    },
+  ]
+  for (let i = 0; i < 16; i++) {
+    const ox = (i % 4) * T
+    const oy = Math.floor(i / 4) * T
+    tiles[i % tiles.length](ox, oy)
+    aoEdge(ox, oy)
+  }
+  const map = tex(c)
+  map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping
+  map.anisotropy = 8
+
+  // relevo: cinza médio por baixo, e a luminância do desenho por cima
+  const b = canvas(T * 4, T * 4)
+  b.g.fillStyle = '#808080'
+  b.g.fillRect(0, 0, T * 4, T * 4)
+  b.g.filter = 'grayscale(1) contrast(1.4)'
+  b.g.drawImage(c, 0, 0)
+  const bump = tex(b.c, false)
+  bump.anisotropy = 8
+  return { map, bump, tiles: 4 }
+}
+
+/** Bolsa de estiva (tecido claro, costuras, duas tiras e uma etiqueta). */
+export function bagTexture() {
+  const { c, g } = canvas(512, 384)
+  const r = rng(77)
+  g.fillStyle = '#d9d6cb'
+  g.fillRect(0, 0, 512, 384)
+  for (let i = 0; i < 9000; i++) {
+    g.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '70,70,60'},${r() * 0.05})`
+    g.fillRect(r() * 512, r() * 384, 1 + r() * 2, 1 + r() * 2)
+  }
+  g.strokeStyle = 'rgba(70,68,58,0.55)'
+  g.setLineDash([8, 6])
+  g.lineWidth = 2
+  g.strokeRect(14, 14, 484, 356)
+  g.setLineDash([])
+  for (const x of [150, 362]) {
+    g.fillStyle = 'rgba(86,92,108,0.9)'
+    g.fillRect(x - 16, 0, 32, 384)
+    g.fillStyle = 'rgba(30,34,46,0.5)'
+    g.fillRect(x - 16, 180, 32, 10)
+  }
+  g.fillStyle = '#eef0f4'
+  g.fillRect(196, 120, 120, 70)
+  g.fillStyle = '#151a26'
+  g.font = '600 15px "JetBrains Mono", monospace'
+  g.fillText('STOW  B-07', 204, 148)
+  g.fillText('LAB  AFT', 204, 170)
+  g.fillStyle = 'rgba(96,102,116,0.95)'
+  g.fillRect(40, 300, 110, 34)
+  const t = tex(c)
+  t.anisotropy = 8
+  return t
 }
