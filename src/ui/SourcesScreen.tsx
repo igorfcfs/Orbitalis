@@ -11,6 +11,10 @@ const SOURCES: { name: string; use: string; href: string }[] = [
   { name: 'NASA Human Research Program', use: 'Countermeasure protocols and evidence by system', href: 'https://www.nasa.gov/humans-in-space/counteracting-bone-and-muscle-loss-in-microgravity/' },
   { name: 'Human adaptation to spaceflight: the role of nutrition', use: 'Vitamin D 800 IU/day, ISS standard since 2006', href: 'https://www.nasa.gov/wp-content/uploads/2024/10/human-adaptation-to-spaceflight-the-role-of-nutrition.pdf' },
   { name: 'Z-Anatomy / Shandon’s Body Atlas', use: '3D anatomy in six layers, CC BY-SA 4.0', href: 'https://github.com/ryanjardine95/shandons-body-atlas' },
+  { name: 'Microsoft Rocketbox avatars', use: 'Faces and hair of the four crew members: generic characters that depict no real person (MIT license). Only the head was kept and fitted to the body', href: 'https://github.com/microsoft/Microsoft-Rocketbox' },
+  { name: 'NASA 3D Resources: Z-2 spacesuit', use: 'EVA suit model, public domain. Textures reduced, flag, NASA insignia and baked dirt removed; re-posed and fitted per astronaut at load', href: 'https://github.com/nasa/NASA-3D-Resources' },
+  { name: 'Solar System Scope textures', use: 'Mars and the Milky Way seen from the window, CC BY 4.0, based on NASA and ESA data', href: 'https://www.solarsystemscope.com/textures/' },
+  { name: 'Poly Haven', use: 'Studio lighting HDRI and fabric and paint textures, CC0', href: 'https://polyhaven.com/' },
 ]
 
 const CALIBRATIONS: { label: string; value: string; source: string; href: string }[] = [
@@ -112,7 +116,8 @@ export function SourcesScreen() {
             <li>Status is computed by deterministic code and never by AI. This build makes no model calls; explanations are fixed catalog text, marked “Offline explanation”.</li>
             <li>Actions come from a closed catalog. The app gives no diagnosis, medication or dose.</li>
             <li>Prototype assumption, not a published value: outside the hull only the EVA suit shields you, modeled as twice the 1.8 mSv/day measured inside a spacecraft. Replace it with the mission’s own dosimetry.</li>
-            <li>The characters, their hair, eyes, skin and uniforms, the suit and the habitat are drawn for this prototype. The anatomical body is a male atlas model; two crew members use adjusted proportions.</li>
+            <li>The characters, their hair, eyes, skin and uniforms, the suit and the habitat are drawn for this prototype. The anatomical body is a male atlas model; the two women use reshaped proportions, not a female anatomy model.</li>
+            <li>Each body reflects the day’s measurements: limbs thin as strength and exercise fall below plan, the build follows body mass, and short sleep shows as shadows under the eyes. This is a drawing aid. It never sets a status.</li>
             <li>{ATTRIBUTION}</li>
           </ul>
         </section>
