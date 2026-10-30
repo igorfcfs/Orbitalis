@@ -5,7 +5,7 @@ import {
   LINK_DELAY_MIN, MISSION_DAY, MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, astronautStatus, dueItems, getAstronaut, headline, systemStatus,
 } from '../lib/model'
 import { go, paths, type Route } from '../lib/route'
-import { ATTRIBUTION } from '../scene/anatomy'
+import { ATTRIBUTION, LAYERS } from '../scene/anatomy'
 import { useSim, useStore } from '../state/store'
 import type { Status } from '../types'
 import { StatusPill } from './primitives'
@@ -94,20 +94,40 @@ export function CrewOverlay() {
 // ---------- Corpo: dock, dica sob o cursor, trilho de teclado ----------
 
 export function Dock({ route }: { route: Exclude<Route, { level: 0 }> }) {
+  const sim = useSim()
   const suit = useStore((s) => s.suit)
   const xray = useStore((s) => s.xray)
   const setSuit = useStore((s) => s.setSuit)
   const setXray = useStore((s) => s.setXray)
   const atHome = route.level === 1 && route.view === 'home'
+  // A radiação não tem mais aura em volta do corpo: o estado dela fica aqui, com forma e palavra
+  const rad = systemStatus(getAstronaut(route.id), 'radiation', sim)
+  const onRad = route.level !== 1 && route.system === 'radiation'
   return (
     <div className="dock" role="toolbar" aria-label="Body tools">
       <button type="button" className={`dock-btn${suit ? ' on' : ''}`} aria-pressed={suit} aria-label={suit ? 'Take off the EVA suit' : 'Put on the EVA suit'} onClick={() => setSuit(!suit)}>
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5a6.5 6.5 0 0 0-6.5 6.5v2.2c0 3.2 2.1 5.9 5 6.6V20H8.5a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2H13v-2.2c2.9-.7 5-3.4 5-6.6V9A6.5 6.5 0 0 0 12 2.5Zm-4.5 6.8c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5v1.6H7.5V9.3Z" fill="currentColor" /></svg>
         <span>{suit ? 'Take off suit' : 'EVA suit'}</span>
       </button>
-      <button type="button" className={`dock-btn${xray ? ' on' : ''}`} aria-pressed={xray} aria-label="X-ray view" onClick={() => setXray(!xray)}>
+      {!suit && <button type="button" className={`dock-btn${xray ? ' on' : ''}`} aria-pressed={xray} aria-label="X-ray view, all body systems" onClick={() => setXray(!xray)}>
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3c0 1.2-.7 2.2-1.7 2.7V9h3.2a1 1 0 1 1 0 2H13v2h3.5a1 1 0 1 1 0 2H13v2.3l2.6 3.7a1 1 0 1 1-1.6 1.2L12 19.4 10 22.2a1 1 0 1 1-1.6-1.2l2.6-3.7V15H7.5a1 1 0 1 1 0-2H11v-2H7.5a1 1 0 1 1 0-2h3.2V7.7A3 3 0 0 1 12 2Z" fill="currentColor" /></svg>
         <span>X-ray</span>
+      </button>}
+      <button
+        type="button"
+        className={`dock-btn rad s-${rad}${onRad ? ' on' : ''}`}
+        aria-label={`Radiation, ${STATUS_LABEL[rad].toLowerCase()}`}
+        aria-current={onRad ? 'page' : undefined}
+        onClick={() => go(paths.system(route.id, 'radiation'))}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+          <circle cx="12" cy="12" r="2.1" />
+          {[0, 120, 240].map((a) => (
+            <path key={a} transform={`rotate(${a} 12 12)`} d="M10 8.54 7 3.34A10 10 0 0 1 17 3.34L14 8.54A4 4 0 0 0 10 8.54Z" />
+          ))}
+        </svg>
+        <span>Radiation</span>
+        <b className="dock-status"><i aria-hidden="true">{STATUS_GLYPH[rad]}</i><em>{STATUS_LABEL[rad]}</em></b>
       </button>
       {!atHome && (
         <button type="button" className="dock-btn" aria-label="Reset view" onClick={() => go(paths.body(route.id))}>
@@ -116,6 +136,47 @@ export function Dock({ route }: { route: Exclude<Route, { level: 0 }> }) {
         </button>
       )}
     </div>
+  )
+}
+
+/**
+ * Sistemas do atlas. O raio-X liga todos de uma vez; aqui cada um liga, desliga e, com o cursor
+ * em cima, aparece inteiro enquanto os outros esmaecem.
+ */
+export function LayersRail() {
+  const layers = useStore((s) => s.layers)
+  const toggle = useStore((s) => s.toggleLayer)
+  const setAll = useStore((s) => s.setAllLayers)
+  const setHover = useStore((s) => s.setHoverLayer)
+  const all = layers.length === LAYERS.length
+  return (
+    <nav className="layers" aria-label="Anatomy layers" onPointerLeave={() => setHover(null)}>
+      <span className="label layers-title">Anatomy</span>
+      <button type="button" className={`layer-btn all${all ? ' on' : ''}`} aria-pressed={all} onClick={() => setAll(!all)}>
+        <i aria-hidden="true" />
+        <span>All systems</span>
+      </button>
+      <hr className="layers-sep" />
+      {LAYERS.map((l) => {
+        const on = layers.includes(l.id)
+        return (
+          <button
+            key={l.id}
+            type="button"
+            className={`layer-btn${on ? ' on' : ''}`}
+            aria-pressed={on}
+            title={l.blurb}
+            onClick={() => toggle(l.id)}
+            onPointerEnter={() => setHover(l.id)}
+            onFocus={() => setHover(l.id)}
+            onBlur={() => setHover(null)}
+          >
+            <i style={{ ['--layer' as string]: l.color }} aria-hidden="true" />
+            <span>{l.label}</span>
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -249,6 +310,9 @@ export function Credits() {
         <h2>Credits</h2>
         <p className="small">{ATTRIBUTION}</p>
         <p className="small muted">The body is built from the Z-Anatomy skin layer (Shandon’s Body Atlas), recolored and tailored for each crew member. The layers stay under CC BY-SA 4.0. Orbitalis code is original.</p>
+        <p className="small muted">EVA suit: the Z-2 prototype planetary suit model from NASA 3D Resources (public domain), with the insignia and baked dirt removed, fitted to each astronaut.</p>
+        <p className="small muted">Faces and hair: generic avatars from the Microsoft Rocketbox library (MIT license), which depict no real person. The crew is fictional.</p>
+        <p className="small muted">Mars and the sky: Solar System Scope textures (CC BY 4.0), based on NASA and ESA data. Studio lighting and fabric textures: Poly Haven (CC0).</p>
         <p className="small muted">Crew, names and signals are fictional. Hair, eyes, skin, uniforms, suit and the habitat are drawn for this prototype.</p>
         <button type="button" className="btn primary" onClick={() => setCredits(false)}>Close</button>
       </div>

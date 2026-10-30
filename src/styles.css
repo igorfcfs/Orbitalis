@@ -269,6 +269,30 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .a11y-rail a { padding: 8px 14px; border-radius: 10px; font-size: 14px; }
 .a11y-rail a:focus-visible { background: rgba(255, 255, 255, 0.14); }
 
+/* Camadas do atlas: tons neutros, nunca as cores de status */
+.layers {
+  position: absolute; left: 28px; top: 50%; transform: translateY(-50%); z-index: 12; display: grid; gap: 4px; padding: 14px 10px 10px; border-radius: 24px;
+  background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(22px) saturate(1.3); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+}
+.layers-title { padding: 0 10px 6px; }
+.layers-sep { width: auto; height: 1px; margin: 4px 8px; border: 0; background: var(--line); }
+.layer-btn.all i { background: conic-gradient(#b9625b, #eceff6, #e4a3b8, #79b0ff, #e6d9a2, #b9625b); opacity: 0.55; }
+.layer-btn.all.on i { opacity: 1; box-shadow: 0 0 12px rgba(190, 210, 255, 0.55); }
+.dock-btn.rad .dock-status { display: inline-flex; align-items: center; gap: 6px; padding-left: 4px; font: 600 11px/1 var(--mono); letter-spacing: 0.08em; color: var(--c); }
+.dock-btn.rad .dock-status i { font-style: normal; font-size: 12px; }
+.dock-btn.rad .dock-status em { font-style: normal; }
+.dock-btn.rad.on .dock-status { color: #05070f; }
+.dock-btn.rad.s-critical { animation: radpulse 1.6s ease-in-out infinite; }
+@keyframes radpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 93, 93, 0); } 50% { box-shadow: 0 0 0 5px rgba(255, 93, 93, 0.24); } }
+.layer-btn {
+  display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 18px 0 12px; border-radius: 14px; border: 1px solid transparent; background: transparent;
+  font-size: 14px; font-weight: 500; color: var(--ink-2); text-align: left; transition: background 0.25s, color 0.25s;
+}
+.layer-btn i { width: 12px; height: 12px; border-radius: 50%; background: var(--layer); opacity: 0.45; transition: opacity 0.25s, box-shadow 0.25s; flex: none; }
+.layer-btn:hover { background: rgba(255, 255, 255, 0.08); color: var(--ink); }
+.layer-btn.on { background: rgba(255, 255, 255, 0.13); color: var(--ink); border-color: var(--line-2); }
+.layer-btn.on i { opacity: 1; box-shadow: 0 0 12px var(--layer); }
+
 /* ---------- Menu ---------- */
 .scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.5); opacity: 0; pointer-events: none; transition: opacity 0.35s; }
 .scrim.on { opacity: 1; pointer-events: auto; }
@@ -350,6 +374,9 @@ tr:last-child td { border-bottom: 0; }
   .panel { left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; height: 50vh; border-radius: 24px; }
   .dock { left: 50%; bottom: calc(50vh + 24px); }
   .dock-btn { height: 42px; padding: 0 14px; }
+  .layers { left: 12px; top: 84px; transform: none; padding: 10px 6px 6px; border-radius: 20px; }
+  .layers-title { display: none; }
+  .layer-btn { height: 40px; padding: 0 12px 0 10px; }
   .chip-day, .chip-link { height: 40px; padding: 0 12px; }
   .chip-link span { display: none; }
   .sources { padding: 88px 20px 40px; }
@@ -367,6 +394,9 @@ tr:last-child td { border-bottom: 0; }
   .plate .pill { height: 20px; padding: 0 7px; font-size: 9px; letter-spacing: 0.06em; }
   .dock-btn span { display: none; }
   .dock-btn { padding: 0 16px; }
+  .layer-btn span { display: none; }
+  .layer-btn { padding: 0 11px; }
+  .dock-btn.rad .dock-status em { display: none; }
   .hero h1 { font-size: 28px; }
   .panel { padding: 22px 18px; }
   .big .reading .num { font-size: 52px; }

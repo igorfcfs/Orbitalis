@@ -2,12 +2,13 @@ import { useEffect } from 'react'
 import { go, paths, parentPath, useRoute } from './lib/route'
 import { Stage } from './scene/Stage'
 import { useStore } from './state/store'
-import { CrewOverlay, Credits, Dock, Hud, HoverTip, MenuSheet, SystemRail } from './ui/Hud'
+import { CrewOverlay, Credits, Dock, Hud, HoverTip, LayersRail, MenuSheet, SystemRail } from './ui/Hud'
 import { Panel } from './ui/Panel'
 import { SourcesScreen } from './ui/SourcesScreen'
 
 export default function App() {
   const route = useRoute()
+  const suit = useStore((s) => s.suit)
   const setSuit = useStore((s) => s.setSuit)
   const setXray = useStore((s) => s.setXray)
 
@@ -49,6 +50,7 @@ export default function App() {
           <>
             <Panel route={route} />
             <Dock route={route} />
+            {!suit && <LayersRail />}
             <SystemRail route={route} />
           </>
         )}
