@@ -142,14 +142,14 @@ export function MetricChart({ m, day }: { m: ResolvedMetric; day: number }) {
         {m.threshold.range && (
           <rect x={pad.l} width={W - pad.l - pad.r} y={y(m.threshold.range[1])} height={y(m.threshold.range[0]) - y(m.threshold.range[1])} className="band" />
         )}
-        {ticks.map((t) => (
-          <g key={t}>
+        {ticks.map((t, i) => (
+          <g key={i}>
             <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} className="grid" />
             <text x={pad.l - 6} y={y(t) + 3} textAnchor="end" className="axis">{fmt(t, dec > 1 ? 1 : dec)}</text>
           </g>
         ))}
-        {xTicks.map((d) => (
-          <text key={d} x={x(d)} y={H - 8} textAnchor="middle" className="axis">{d === 0 ? 'Day 0' : d}</text>
+        {xTicks.map((d, i) => (
+          <text key={i} x={x(d)} y={H - 8} textAnchor="middle" className="axis">{d === 0 ? 'Day 0' : d}</text>
         ))}
         {canProject && (
           <>
@@ -204,8 +204,8 @@ export function TrendCompare({ metrics }: { metrics: ResolvedMetric[] }) {
   return (
     <figure className="chart">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Metrics as a percentage of their pre-flight value over the mission">
-        {[min + 1, 100, max - 1].map((t) => (
-          <g key={t}>
+        {[min + 1, 100, max - 1].map((t, i) => (
+          <g key={i}>
             <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} className={t === 100 ? 'ref baseline' : 'grid'} />
             <text x={pad.l - 6} y={y(t) + 3} textAnchor="end" className="axis">{Math.round(t)}%</text>
           </g>
@@ -217,8 +217,8 @@ export function TrendCompare({ metrics }: { metrics: ResolvedMetric[] }) {
             fill="none" className="neutral-line" strokeWidth="1.8" strokeDasharray={DASHES[i % 3]}
           />
         ))}
-        {[0, Math.round(xMax / 2), xMax].map((d) => (
-          <text key={d} x={x(d)} y={H - 6} textAnchor="middle" className="axis">{d === 0 ? 'Day 0' : d}</text>
+        {[0, Math.round(xMax / 2), xMax].map((d, i) => (
+          <text key={i} x={x(d)} y={H - 6} textAnchor="middle" className="axis">{d === 0 ? 'Day 0' : d}</text>
         ))}
       </svg>
       <figcaption className="legend">
