@@ -745,16 +745,6 @@ export const EvaWorld = memo(function EvaWorld() {
     }),
     [hullMap, hullBump, foilBump, solarMap],
   )
-  const tether = useMemo(() => {
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.1, 1.15, -0.3),
-      new THREE.Vector3(-0.6, 0.55, -1.8),
-      new THREE.Vector3(-1.8, 0.35, -4.5),
-      new THREE.Vector3(-3.2, 0.8, -7.2),
-      new THREE.Vector3(-4.2, 1.2, -9.4),
-    ])
-    return new THREE.TubeGeometry(curve, 64, 0.012, 6, false)
-  }, [])
   const rings = useMemo(() => [-9, -4.5, 0, 4.5, 9], [])
   const posts = useMemo(() => Array.from({ length: 9 }, (_, i) => -9 + i * 2.25), [])
   const phiRails = useMemo(() => [Math.PI * 0.16, Math.PI * 0.34], [])
@@ -849,9 +839,6 @@ export const EvaWorld = memo(function EvaWorld() {
           </mesh>
         </group>
       </group>
-      <mesh geometry={tether}>
-        <meshStandardMaterial color="#d9dfec" roughness={0.55} />
-      </mesh>
     </group>
   )
 })

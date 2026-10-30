@@ -14,6 +14,7 @@ import {
 } from './bodyShader'
 import { buildCollar, DEFAULT_NECK } from './collar'
 import { makeHairShells } from './hairShells'
+import { createTether } from './tether'
 import type { HeadModel } from './headModel'
 import { HEAD_IN_HELMET, fitSuit, type SuitModel } from './suitModel'
 
@@ -129,10 +130,48 @@ function makeHeadMaterials(head: HeadModel, u: BodyUniforms, eyeColor: string) {
   // ambiente inteiro por cima da íris
   const eye = new THREE.MeshPhysicalMaterial({ map: eyeTexture(eyeColor), roughness: 0.32, metalness: 0, clearcoat: 0.3, clearcoatRoughness: 0.08, envMapIntensity: 0.3 })
   patchPartMaterial(eye, u, 'fade')
-  return { skin, hair, eye }
+  // Piscar e olhar: a pálpebra de cima desce sobre o globo (a abertura passa a ter a cor da pele) e a íris desliza pela esfera
+  // (deslocamento do UV: a textura é mapeada como a SphereGeometry, uma volta = 2π em U e π em V). O globo é uma esfera fina,
+  // então o deslocamento lê como o olho girando dentro da órbita.
+  if (!head.eyes.boundingBox) head.eyes.computeBoundingBox()
+  const box = head.eyes.boundingBox!
+  const blink = { uBlink: { value: 0 }, uGaze: { value: new THREE.Vector2() }, uLid: { value: head.avgSkin.clone().multiplyScalar(0.72) }, uEyeY: { value: new THREE.Vector2(box.min.y, box.max.y) } }
+  const base = eye.onBeforeCompile
+  eye.onBeforeCompile = (shader, renderer) => {
+    base.call(eye, shader, renderer)
+    Object.assign(shader.uniforms, blink)
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying float vEyeY;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEyeY = position.y;')
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uBlink; uniform vec2 uGaze; uniform vec3 uLid; uniform vec2 uEyeY; varying float vEyeY;')
+      .replace('#include <map_fragment>', THREE.ShaderChunk.map_fragment.replace('vMapUv )', 'vMapUv - vec2(uGaze.x * 0.159, uGaze.y * 0.318) )') + `
+        float lidEdge = mix(uEyeY.y + 0.003, uEyeY.x - 0.001, uBlink);
+        diffuseColor.rgb = mix(diffuseColor.rgb, uLid, smoothstep(lidEdge - 0.0015, lidEdge + 0.0015, vEyeY));`)
+  }
+  eye.customProgramCacheKey = () => 'head-eye-blink'
+  return { skin, hair, eye, blink }
 }
 
 const noRaycast = () => {}
+
+/** Semente estável por astronauta e ruído determinístico em [0, 1): cada um pisca, olha e balança em tempos próprios */
+function seedOf(id: string) {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997
+  return h
+}
+const rnd = (n: number) => {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453
+  return s - Math.floor(s)
+}
+const tmpV = new THREE.Vector3()
+const bodyE = new THREE.Euler()
+const tetherStart = new THREE.Vector3()
+const headQ = new THREE.Quaternion()
+const headE = new THREE.Euler()
+const headP = new THREE.Vector3()
+const headR = new THREE.Vector3()
 
 /**
  * Material do traje de EVA: o tecido do modelo (com brilho de tecido), com o shader do corpo (varredura, raio-X,
@@ -275,6 +314,8 @@ export interface RigProps {
   selected: SystemId | null
   hoverSys: SystemId | null
   suit: boolean
+  /** Fora do casco, no vácuo: só aqui o astronauta flutua e o cabo de segurança aparece (dentro da estação os pés ficam no piso) */
+  space: boolean
   xray: boolean
   /** Dissolução geral (0 = presente, 1 = ausente) */
   fadeTarget: number
@@ -352,7 +393,16 @@ export function AstronautRig(p: RigProps) {
   const headGroup = useRef<THREE.Group>(null)
   const headGhost = useRef<THREE.Group>(null)
   const headAnchor = useRef<THREE.Object3D>(null)
-  const state = useRef({ suit: p.suit ? 1 : 0, sel: 0, reveal: 0, xray: 0, fade: p.fadeTarget, turn: 0, hoverScale: 1 })
+  const state = useRef({
+    suit: p.suit ? 1 : 0, sel: 0, reveal: 0, xray: 0, fade: p.fadeTarget, turn: 0, hoverScale: 1,
+    // vida: cabeça (giro e inclinação), olhar, piscar e troca de peso
+    yaw: 0, pitch: 0, gx: 0, gv: 0, blinkT: -1, nextBlink: 1.5, shift: 0, space: 0, tether: 0,
+  })
+  // Cabo de segurança: corda simulada entre um ponto do cinto do traje e o casco
+  const tether = useMemo(() => createTether(new THREE.MeshStandardMaterial({ color: '#d9dfec', roughness: 0.55, transparent: true, opacity: 0 })), [])
+  useEffect(() => () => tether.dispose(), [tether])
+  const tetherAnchor = useRef<THREE.Object3D>(null)
+  const seed = useMemo(() => seedOf(astro.id), [astro.id])
   const pickRef = useRef<THREE.Mesh>(null)
 
   // BVH para o clique por região
@@ -508,7 +558,7 @@ export function AstronautRig(p: RigProps) {
     } else p.onPickSys('radiation')
   }
 
-  useFrame(({ clock, pointer }, dt) => {
+  useFrame(({ clock, pointer, camera }, dt) => {
     const st = state.current
     const t = clock.elapsedTime
     const k = (rate: number) => 1 - Math.exp(-dt * rate)
@@ -525,10 +575,64 @@ export function AstronautRig(p: RigProps) {
     if (visorMesh.current) visorMesh.current.visible = st.suit > 0.001
     // Dentro do capacete a cabeça sobe e avança até ficar atrás do vidro; só depois da varredura passar pelo pescoço, para não
     // aparecer um pescoço esticado acima da gola
+    const still = calm()
+    // A anatomia por baixo não se mexe: com o raio-X ou uma região aberta o astronauta fica quieto para a pele e os órgãos coincidirem
+    const live = still ? 0 : 1 - Math.max(st.xray, st.reveal)
     if (headGroup.current) {
       // No raio-X ela volta ao lugar anatômico, onde está o crânio da anatomia
       const up = THREE.MathUtils.smoothstep(st.suit, 0.74, 1.0) * (1 - st.xray)
-      headGroup.current.position.set(0, (HEAD_IN_HELMET.lift * up) / NORM_SCALE, (HEAD_IN_HELMET.forward * up) / NORM_SCALE)
+      // Vida na cabeça: gira no pescoço, olha para a câmera, troca o olhar de vez em quando e respira junto com o tórax. Dentro do
+      // capacete a amplitude cai pela metade (o vidro e a gola limitam).
+      const amp = live * (1 - 0.5 * st.suit)
+      const ep = Math.floor(t / 4.7 + seed * 0.13)
+      const glance = rnd(ep * 7.7 + seed) > 0.4 ? 1 : 0
+      const gy = (rnd(ep * 3.1 + seed) - 0.5) * 0.5 * glance
+      const gp = (rnd(ep * 5.3 + seed) - 0.5) * 0.18 * glance
+      const cam = group.current ? group.current.worldToLocal(tmpV.copy(camera.position)) : tmpV.set(0, 1.6, 4)
+      const camYaw = Math.atan2(cam.x, cam.z)
+      const toCam = THREE.MathUtils.smoothstep(Math.abs(camYaw), 1.9, 1.2)
+      const camPitch = -Math.atan2(cam.y - 1.65, Math.hypot(cam.x, cam.z))
+      const wantYaw = (camYaw * 0.4 * toCam + gy) * amp + 0.03 * Math.sin(t * 0.37 + seed) * amp
+      const wantPitch = (camPitch * 0.3 * toCam + gp) * amp + 0.02 * Math.sin(t * 0.23 + seed * 2) * amp
+      const lim = 0.35 * (1 - 0.35 * st.suit)
+      st.yaw += (THREE.MathUtils.clamp(wantYaw, -lim, lim) - st.yaw) * k(2.6)
+      st.pitch += (THREE.MathUtils.clamp(wantPitch, -0.2, 0.2) - st.pitch) * k(2.6)
+      // Os olhos chegam antes da cabeça: o que falta para a cabeça alcançar o alvo vira o olhar, mais um tremor de sacada
+      const sac = Math.floor(t * 1.15 + seed)
+      const gx = THREE.MathUtils.clamp((wantYaw - st.yaw) * 1.6, -0.2, 0.2) + (rnd(sac * 2.3 + seed) - 0.5) * 0.06 * amp
+      const gv = THREE.MathUtils.clamp((wantPitch - st.pitch) * 1.6, -0.12, 0.12) + (rnd(sac * 4.1 + seed) - 0.5) * 0.04 * amp
+      st.gx += (gx - st.gx) * k(14)
+      st.gv += (gv - st.gv) * k(14)
+      const breath = u.uBreath.value
+      headQ.setFromEuler(headE.set(st.pitch - 0.012 * breath * live, st.yaw, -0.005 * st.shift * live, 'YXZ'))
+      const neck = p.head?.neck ?? DEFAULT_NECK
+      headP.set(neck.cx, 1.49, neck.cz)
+      headR.copy(headP).applyQuaternion(headQ)
+      headGroup.current.quaternion.copy(headQ)
+      headGroup.current.position.set(
+        headP.x - headR.x,
+        headP.y - headR.y + (HEAD_IN_HELMET.lift * up) / NORM_SCALE + 0.0035 * breath * live,
+        headP.z - headR.z + (HEAD_IN_HELMET.forward * up) / NORM_SCALE,
+      )
+      if (headMats) {
+        // Piscar: ~15 por minuto, de vez em quando duas seguidas; uns 170 ms
+        let b = 0
+        if (!still) {
+          if (st.blinkT < 0 && t > st.nextBlink) st.blinkT = t
+          if (st.blinkT >= 0) {
+            const e = (t - st.blinkT) / 0.17
+            if (e >= 1) {
+              st.blinkT = -1
+              st.nextBlink = t + (rnd(t * 13.7 + seed) < 0.2 ? 0.2 : 2.4 + rnd(t * 3.3 + seed) * 4.6)
+            } else {
+              b = e < 0.4 ? e / 0.4 : 1 - (e - 0.4) / 0.6
+              b = b * b * (3 - 2 * b)
+            }
+          }
+        }
+        headMats.blink.uBlink.value = b
+        headMats.blink.uGaze.value.set(st.gx, st.gv)
+      }
     }
     // Com o traje fechado e fora do raio-X, a gola do macacão continua por dentro do capacete e sobe junto com a cabeça
     // (o pescoço mantém o comprimento normal); o resto do corpo fica escondido pelo traje
@@ -585,16 +689,61 @@ export function AstronautRig(p: RigProps) {
 
     // Vida: respiração, flutuação e giro suave em direção ao cursor
     if (group.current) {
-      const still = calm()
       const x = p.xs.current[astro.id]
-      // Pés plantados no piso: sem flutuar. O balanço de peso gira o corpo em torno dos pés e a respiração é feita no shader.
-      group.current.position.set(x, 0, 0)
+      // Troca de peso: a cada ~9 s o corpo passa o peso para o outro pé (inclina uns 0,7° e a cabeça compensa)
+      const wep = Math.floor(t / 9 + seed * 0.07)
+      st.shift += (Math.round((rnd(wep * 2.9 + seed) - 0.5) * 2) - st.shift) * k(0.8)
+      // Braços soltos balançam com a respiração e com a troca de peso, defasados; a mão é o que mais se mexe
+      // Com o traje, fora do casco: microgravidade. O corpo inteiro flutua e gira devagar em torno do centro de massa, os braços
+      // sobem à frente (ângulo negativo = braço para cima) e derivam, e as pernas pendem soltas e se abrem.
+      st.space += ((p.space && p.suit && suitFit ? 1 : 0) - st.space) * k(1.1)
+      const fl = st.space * live
+      const sw = (o: number) =>
+        (0.03 * Math.sin(t * 0.71 + seed + o) + 0.014 * Math.sin(t * 1.9 + seed * 1.3 + o * 2) + 0.018 * u.uBreath.value + 0.02 * st.shift) * live +
+        fl * (-0.16 + 0.14 * Math.sin(t * 0.43 + seed + o) + 0.06 * Math.sin(t * 0.97 + seed * 2 + o))
+      u.uSway.value.set(sw(0), sw(2.4))
+      u.uLegs.value.set(
+        fl * (0.1 + 0.11 * Math.sin(t * 0.39 + seed * 1.1) + 0.04 * Math.sin(t * 0.88 + seed)),
+        fl * (0.1 + 0.11 * Math.sin(t * 0.39 + seed * 1.1 + 2.1) + 0.04 * Math.sin(t * 0.88 + seed + 1.3)),
+        0,
+      )
+      // Cada perna se abre para o lado e dobra o joelho no seu próprio ritmo (como a pose relaxada de quem flutua)
+      u.uLegs2.value.set(
+        fl * (0.14 + 0.12 * Math.sin(t * 0.33 + seed * 0.9)),
+        fl * (0.14 + 0.12 * Math.sin(t * 0.33 + seed * 0.9 + 2.4)),
+        fl * (0.22 + 0.2 * Math.sin(t * 0.47 + seed * 1.4 + 1)),
+        fl * (0.22 + 0.2 * Math.sin(t * 0.47 + seed * 1.4 + 3.3)),
+      )
       group.current.visible = st.fade < 0.98
       // Na formação o corpo acompanha o cursor; em foco, parado (quem gira é a câmera)
       const target = p.lineup ? -pointer.x * 0.18 : 0
       st.turn += (target - st.turn) * k(3)
-      group.current.rotation.y = (still ? 0 : st.turn + Math.sin(t * 0.35 + x) * 0.025)
-      group.current.rotation.z = still ? 0 : Math.sin(t * 0.41 + x * 1.3) * 0.0045
+      group.current.rotation.x = fl * (0.09 * Math.sin(t * 0.27 + seed) + 0.03 * Math.sin(t * 0.71 + seed * 2))
+      group.current.rotation.y = (still ? 0 : st.turn + Math.sin(t * 0.35 + x) * 0.025) + fl * 0.16 * Math.sin(t * 0.17 + seed)
+      group.current.rotation.z = still ? 0 : Math.sin(t * 0.41 + x * 1.3) * 0.0045 + 0.012 * st.shift * live + fl * 0.07 * Math.sin(t * 0.21 + seed * 1.3)
+      // Pés plantados no piso na baia (o balanço de peso gira o corpo em torno dos pés); em microgravidade a rotação é em torno da
+      // cintura e o corpo sobe e deriva, como se estivesse preso só pelo cabo
+      bodyE.copy(group.current.rotation)
+      tmpV.set(0, 0.95, 0).applyEuler(bodyE)
+      const c = Math.min(1, fl * 8)
+      group.current.position.set(
+        x + fl * 0.05 * Math.sin(t * 0.23 + seed * 1.7) - c * tmpV.x,
+        fl * (0.02 + 0.07 * Math.sin(t * 0.37 + seed) + 0.03 * Math.sin(t * 0.93 + seed * 2)) + c * (0.95 - tmpV.y),
+        fl * 0.04 * Math.sin(t * 0.19 + seed * 0.6) - c * tmpV.z,
+      )
+      // O cabo acompanha o cinto do traje, já na posição deste quadro
+      // O cabo só existe com o traje vestido no vácuo: ao tirar o traje (ou na baia) ele some primeiro, num esmaecer rápido, sem
+      // esperar a flutuação terminar de assentar
+      const wantTether = p.space && p.suit && suitFit && st.fade < 0.98
+      st.tether += ((wantTether ? 1 : 0) - st.tether) * k(wantTether ? 3 : 18)
+      ;(tether.mesh.material as THREE.MeshStandardMaterial).opacity = st.tether
+      tether.mesh.visible = st.tether > 0.02
+      if (!tether.mesh.visible && !wantTether) tether.reset()
+      if (tether.mesh.visible && tetherAnchor.current) {
+        group.current.updateMatrixWorld(true)
+        tetherAnchor.current.getWorldPosition(tetherStart)
+        tether.step(tetherStart, dt, t, still)
+      }
       // Respiração: ~13 por minuto, cada astronauta em uma fase
       u.uBreath.value = still ? 0 : 0.5 - 0.5 * Math.cos((t / 4.6 + x * 0.37) * Math.PI * 2)
       const hs = st.hoverScale + ((p.hovered ? 1.035 : 1) - st.hoverScale) * k(8)
@@ -608,6 +757,7 @@ export function AstronautRig(p: RigProps) {
   const eyeDirect = direct('neuro_ocular')
 
   return (
+    <>
     <group ref={group} dispose={null}>
       <group scale={NORM_SCALE}>
         {/* Clique por região: corpo inteiro, invisível */}
@@ -704,7 +854,11 @@ export function AstronautRig(p: RigProps) {
       )}
 
       <object3D ref={headAnchor} position={[0, 2.0, 0]} />
+      {/* Ponto do cinto onde o cabo prende (m, no espaço do traje) */}
+      <object3D ref={tetherAnchor} position={[0.16, 1.04, -0.22]} />
     </group>
+    <primitive object={tether.mesh} />
+    </>
   )
 }
 

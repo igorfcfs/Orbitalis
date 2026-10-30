@@ -332,7 +332,7 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
         const variant = variants[a.look.build]
         return (
           <group key={a.id}>
-            <FollowX xs={xs} id={a.id} hidden={!lineup && !isFocus}>
+            <FollowX xs={xs} id={a.id} hidden={(!lineup && !isFocus) || (!lineup && eva && sim.suit)}>
               <Halo status={overall} active={isFocus} hot={hoverCrew === a.id} />
             </FollowX>
             <AstronautRig
@@ -343,6 +343,7 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
               selected={isFocus ? selected : null}
               hoverSys={isFocus ? hoverSys : null}
               suit={isFocus && sim.suit}
+              space={isFocus && eva}
               xray={isFocus && xray}
               fadeTarget={lineup || isFocus ? 0 : 1}
               focused={isFocus}

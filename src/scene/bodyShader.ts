@@ -39,6 +39,12 @@ export interface BodyUniforms {
   uBreath: THREE.IUniform<number>
   /** 1 com o traje fechado: a gola do macacão e o pescoço continuam visíveis por dentro do visor */
   uInner: THREE.IUniform<number>
+  /** Balanço dos braços (rad, pêndulo para a frente e para trás em torno do ombro): x = braço esquerdo (+x), y = direito */
+  uSway: THREE.IUniform<THREE.Vector2>
+  /** Pernas do traje em microgravidade (rad): x = esquerda, y = direita (pêndulo em torno do quadril), z = abertura lateral */
+  uLegs: THREE.IUniform<THREE.Vector3>
+  /** Pernas do traje: abertura lateral esquerda e direita (rad, x e y), dobra do joelho esquerdo e direito (rad, z e w) */
+  uLegs2: THREE.IUniform<THREE.Vector4>
 }
 
 export function makeBodyUniforms(): BodyUniforms {
@@ -62,6 +68,9 @@ export function makeBodyUniforms(): BodyUniforms {
     uBeard: { value: 0 },
     uBreath: { value: 0 },
     uInner: { value: 0 },
+    uSway: { value: new THREE.Vector2() },
+    uLegs: { value: new THREE.Vector3() },
+    uLegs2: { value: new THREE.Vector4() },
   }
 }
 
@@ -103,6 +112,19 @@ float vnoise(vec3 x){
  */
 const BREATH_GLSL = /* glsl */ `
 uniform float uBreath;
+uniform vec2 uSway;
+uniform vec3 uLegs;
+uniform vec4 uLegs2;
+// Braços soltos: pêndulo em torno do ombro (rotação pequena, linearizada) com um leve afastamento lateral. O peso cresce com a
+// distância ao ombro, então a articulação não se move e a mão é o que mais balança; o tronco e as pernas (|x| menor) ficam parados.
+vec3 armSway(vec3 b) {
+  float s = b.x >= 0.0 ? 1.0 : -1.0;
+  float a = b.x >= 0.0 ? uSway.x : uSway.y;
+  float arm = smoothstep(0.22, 0.3, abs(b.x)) * (1.0 - smoothstep(1.36, 1.44, b.y)) * smoothstep(0.55, 0.65, b.y);
+  vec3 d = vec3(b.x - s * 0.17, b.y - 1.4, b.z);
+  float w = arm * smoothstep(0.0, 0.3, -d.y);
+  return w * (a * vec3(0.0, -d.z, d.y) + a * 0.35 * s * vec3(-d.y, 0.0, 0.0));
+}
 vec3 breathDisp(vec3 b) {
   float torso = 1.0 - smoothstep(0.19, 0.27, abs(b.x));
   float chest = exp(-pow((b.y - 1.29) / 0.105, 2.0));
@@ -113,7 +135,28 @@ vec3 breathDisp(vec3 b) {
   float amp = 0.0135 * chest + 0.0085 * belly;
   vec3 d = vec3(dir.x * amp * 0.55, 0.006 * chest, dir.y * amp * front);
   d.y += 0.006 * smoothstep(1.3, 1.38, b.y) * (1.0 - smoothstep(1.42, 1.5, b.y)) * smoothstep(0.08, 0.17, abs(b.x));
-  return d * torso * uBreath;
+  return d * torso * uBreath + armSway(b);
+}
+
+// Mangas do traje de EVA (posição final do traje, m): o braço inteiro gira como pêndulo em torno do ombro; o tronco rígido não se mexe
+vec3 suitSway(vec3 p, float arm) {
+  float s = p.x >= 0.0 ? 1.0 : -1.0;
+  float a = p.x >= 0.0 ? uSway.x : uSway.y;
+  vec3 d = p - vec3(s * 0.29, 1.395, 0.14);
+  float w = arm * smoothstep(0.02, 0.24, length(d));
+  // Pernas soltas: giram em torno do quadril e se abrem um pouco; o peso cresce até a bota
+  float la = p.x >= 0.0 ? uLegs.x : uLegs.y;
+  float sp = p.x >= 0.0 ? uLegs2.x : uLegs2.y;
+  float kn = p.x >= 0.0 ? uLegs2.z : uLegs2.w;
+  vec3 h = p - vec3(s * 0.1, 0.92, 0.0);
+  float legMask = (1.0 - arm) * (1.0 - smoothstep(0.84, 0.98, p.y));
+  float wl = legMask * smoothstep(0.0, 0.4, -h.y);
+  vec3 disp = w * a * vec3(0.0, -d.z, d.y) + wl * (la * vec3(0.0, -h.z, h.y) + sp * s * vec3(-h.y, 0.0, 0.0));
+  // Joelho (y ~ 0,5): a canela dobra para trás e acompanha o giro da coxa
+  vec3 k = h - vec3(0.0, -0.42, 0.0);
+  float wk = legMask * smoothstep(0.08, -0.08, k.y);
+  disp += wk * kn * vec3(0.0, -k.z, k.y);
+  return disp;
 }
 `
 
@@ -295,7 +338,7 @@ export function patchBodyMaterial(mat: THREE.Material, u: BodyUniforms, mode: Sh
       uHover: u.uHover, uSel: u.uSel, uReveal: u.uReveal, uXray: u.uXray, uTime: u.uTime, uSuitY: u.uSuitY,
       uFade: u.uFade, uStat: u.uStat, uStatCol: u.uStatCol, uRevealCol: u.uRevealCol, uHoverCol: u.uHoverCol, uStatScale: u.uStatScale,
       uAtro: u.uAtro, uMassD: u.uMassD, uFatigue: u.uFatigue, uEyeC: u.uEyeC, uBeard: u.uBeard, uBreath: u.uBreath,
-      uInner: u.uInner,
+      uInner: u.uInner, uSway: u.uSway, uLegs: u.uLegs, uLegs2: u.uLegs2,
     })
     if (decals) {
       Object.assign(shader.uniforms, {
@@ -329,7 +372,7 @@ export function patchBodyMaterial(mat: THREE.Material, u: BodyUniforms, mode: Sh
         ${MORPH_VERT_DECL}
         attribute float aAO; varying float vAO;
         #endif
-        #if defined(BODY_SKIN) || defined(BODY_COVER)
+        #if defined(BODY_SKIN) || defined(BODY_COVER) || defined(BODY_SUIT)
         ${BREATH_GLSL}
         #endif`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -339,6 +382,9 @@ export function patchBodyMaterial(mat: THREE.Material, u: BodyUniforms, mode: Sh
         #endif
         #if defined(BODY_SKIN) || defined(BODY_COVER)
         transformed += breathDisp(aBase);
+        #endif
+        #if defined(BODY_SUIT) && defined(BODY_SYSPOS)
+        transformed += suitSway(aBase, aArm);
         #endif
         #ifdef BODY_COVER
         vCut = aCut;
@@ -665,7 +711,7 @@ export function makeGhostMaterial(u: BodyUniforms, mode: 'skin' | 'cover' | 'sui
     blending: THREE.AdditiveBlending,
     side: THREE.FrontSide,
     uniforms: {
-      uXray: u.uXray, uTime: u.uTime, uSuitY: u.uSuitY, uFade: u.uFade, uAtro: u.uAtro, uMassD: u.uMassD, uBreath: u.uBreath,
+      uXray: u.uXray, uTime: u.uTime, uSuitY: u.uSuitY, uFade: u.uFade, uAtro: u.uAtro, uMassD: u.uMassD, uBreath: u.uBreath, uSway: u.uSway, uLegs: u.uLegs, uLegs2: u.uLegs2,
       uTint: { value: new THREE.Color(mode === 'suit' ? '#cfe8ff' : '#a9c8e8') },
     },
     vertexShader: /* glsl */ `
