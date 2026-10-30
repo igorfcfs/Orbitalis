@@ -5,6 +5,10 @@ import type { Decision, Measurement, Sim, SystemId } from '../types'
 
 export type LayerId = 'skin' | 'muscles' | 'skeleton' | 'organs' | 'vessels' | 'nerves'
 
+/** Os cinco sistemas do atlas, de fora para dentro. O raio-X liga todos; o painel de camadas liga e desliga cada um. */
+export const ATLAS_LAYERS: LayerId[] = ['muscles', 'skeleton', 'organs', 'vessels', 'nerves']
+export const DEFAULT_LAYERS: LayerId[] = ATLAS_LAYERS
+
 interface Persisted {
   measurements: Measurement[]
   diary: Decision[]
@@ -38,6 +42,10 @@ interface Store extends Persisted {
   link: 'delayed' | 'blackout'
   suit: boolean
   xray: boolean
+  /** Camadas do atlas visíveis (esqueleto, músculos, órgãos, circulação, nervos); xray = há alguma ligada */
+  layers: LayerId[]
+  /** Camada sob o cursor no painel de camadas: ganha destaque e as outras esmaecem */
+  hoverLayer: LayerId | null
   /** Sistema sob o cursor no corpo 3D (para o rótulo e o destaque) */
   hoverSys: SystemId | null
   /** Astronauta sob o cursor na formação da tripulação */
@@ -49,6 +57,9 @@ interface Store extends Persisted {
   setLink: (v: Sim['link']) => void
   setSuit: (v: boolean) => void
   setXray: (v: boolean) => void
+  toggleLayer: (id: LayerId) => void
+  setAllLayers: (on: boolean) => void
+  setHoverLayer: (id: LayerId | null) => void
   setHoverSys: (s: SystemId | null) => void
   setHoverCrew: (id: string | null) => void
   setMenu: (v: boolean) => void
@@ -67,15 +78,18 @@ function urlFlags() {
   try {
     const q = new URLSearchParams(window.location.search)
     const day = Number(q.get('day'))
+    const wanted = (q.get('layers') ?? '').split(',').filter((l): l is LayerId => (ATLAS_LAYERS as string[]).includes(l))
+    const xray = q.get('xray') === '1' || wanted.length > 0
     return {
       suit: q.get('suit') === '1',
-      xray: q.get('xray') === '1',
+      xray,
+      layers: wanted.length ? wanted : xray ? DEFAULT_LAYERS : [],
       solar: q.get('solar') === '1',
       link: q.get('link') === 'blackout' ? ('blackout' as const) : ('delayed' as const),
       day: Number.isFinite(day) && day >= 10 && day <= 250 ? day : MISSION_DAY,
     }
   } catch {
-    return { suit: false, xray: false, solar: false, link: 'delayed' as const, day: MISSION_DAY }
+    return { suit: false, xray: false, layers: [] as LayerId[], solar: false, link: 'delayed' as const, day: MISSION_DAY }
   }
 }
 
@@ -87,6 +101,7 @@ export const useStore = create<Store>((set, get) => {
   return {
     ...load(),
     ...urlFlags(),
+    hoverLayer: null,
     hoverSys: null,
     hoverCrew: null,
     menuOpen: false,
@@ -94,8 +109,16 @@ export const useStore = create<Store>((set, get) => {
     setDay: (day) => set({ day }),
     setSolar: (solar) => set({ solar }),
     setLink: (link) => set({ link }),
-    setSuit: (suit) => set({ suit }),
-    setXray: (xray) => set({ xray }),
+    // Com o traje fechado o raio-X não faz sentido (o corpo por dentro não acompanha o traje): vestir o desliga
+    setSuit: (suit) => set(suit ? { suit, xray: false, layers: [] } : { suit }),
+    setXray: (xray) => set((s) => ({ xray, layers: xray ? (s.layers.length ? s.layers : DEFAULT_LAYERS) : [] })),
+    setAllLayers: (on) => set({ layers: on ? ATLAS_LAYERS : [], xray: on }),
+    setHoverLayer: (hoverLayer) => set((s) => (s.hoverLayer === hoverLayer ? s : { hoverLayer })),
+    toggleLayer: (id) =>
+      set((s) => {
+        const layers = s.layers.includes(id) ? s.layers.filter((l) => l !== id) : [...s.layers, id]
+        return { layers, xray: layers.length > 0 }
+      }),
     setHoverSys: (hoverSys) => set((s) => (s.hoverSys === hoverSys ? s : { hoverSys })),
     setHoverCrew: (hoverCrew) => set((s) => (s.hoverCrew === hoverCrew ? s : { hoverCrew })),
     setMenu: (menuOpen) => set({ menuOpen }),
