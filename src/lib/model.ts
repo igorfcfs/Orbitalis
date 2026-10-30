@@ -233,6 +233,39 @@ export function estimatedHeight(astro: Astronaut, day: number) {
   return { baseline: astro.heightM, value: astro.heightM * (1 + growth), pct: growth * 100 }
 }
 
+/**
+ * Físico do astronauta no dia, só para o corpo 3D. Vem das métricas já calculadas e nunca decide
+ * status: atrofia a partir de força e exercício, massa a partir do registro de massa corporal,
+ * fadiga a partir do sono e do desempenho cognitivo.
+ */
+export interface Physique {
+  /** 0 = como no pré-voo, 1 = força e exercício muito abaixo do plano */
+  atrophy: number
+  /** Massa atual sobre a pré-voo menos 1, limitada a ±12% */
+  mass: number
+  /** 0 = descansado, 1 = sono e desempenho muito abaixo */
+  fatigue: number
+}
+
+const unit = (x: number) => Math.min(1, Math.max(0, x))
+
+export function physique(astro: Astronaut, sim: Sim): Physique {
+  const strength = resolveMetric(astro, 'strength', sim)
+  const exercise = resolveMetric(astro, 'exercise', sim)
+  const mass = resolveMetric(astro, 'mass', sim)
+  const sleep = resolveMetric(astro, 'sleep', sim)
+  const cognition = resolveMetric(astro, 'cognition', sim)
+  const lost = unit((100 - strength.value) / 30)
+  const idle = unit((exercise.baseline - exercise.value) / (exercise.baseline * 0.5))
+  const short = unit((7 - sleep.value) / 2.6)
+  const slow = unit((100 - cognition.value) / 15)
+  return {
+    atrophy: unit(0.65 * lost + 0.35 * idle),
+    mass: Math.min(0.12, Math.max(-0.12, (mass.value - mass.baseline) / mass.baseline)),
+    fatigue: unit(0.7 * short + 0.3 * slow),
+  }
+}
+
 // ---------- Fila de medições (RF-04) ----------
 
 export const isLoggable = (def: MetricDef) => def.provenance === 'PERIODIC' || def.provenance === 'LOGGED'
