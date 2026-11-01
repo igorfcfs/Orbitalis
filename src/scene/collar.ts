@@ -153,6 +153,25 @@ export function extractCollarLoop(g: THREE.BufferGeometry): CollarLoop | null {
 
 const LOOP_SAMPLES = 96
 
+/** Eixo do pescoço (x, z) em torno do qual o macacão encolhe dentro do traje (é o centro do laço do corte) */
+export const NECK_AXIS = LOOP_CENTER
+
+/**
+ * O mesmo laço, encolhido em torno do eixo do pescoço: a gola de dentro do traje parte do macacão encolhido (`scale`), mas o
+ * anel em volta do pescoço continua com a medida da pele.
+ */
+export function scaleLoop(loop: CollarLoop, s: number): CollarLoop {
+  const sc = (src: Float32Array) => {
+    const out = new Float32Array(src)
+    for (let j = 0; j < loop.count; j++) {
+      out[3 * j] = LOOP_CENTER.x + (src[3 * j] - LOOP_CENTER.x) * s
+      out[3 * j + 2] = LOOP_CENTER.z + (src[3 * j + 2] - LOOP_CENTER.z) * s
+    }
+    return out
+  }
+  return { ...loop, P: sc(loop.P), Q: sc(loop.Q) }
+}
+
 /**
  * Anel do pescoço a partir dos vértices da pele da cabeça entre 1,43 e 1,455 m (acima do ombro, abaixo do maxilar). Com `index`
  * só contam os vértices que algum triângulo usa (o que `trimBust` tirou não entra na medida).

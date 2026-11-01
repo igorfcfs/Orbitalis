@@ -12,18 +12,18 @@ import { BODY_POINTS, PONYTAIL_ROOT, SYS_BY_INDEX, SYS_INDEX, warp, type BodyVar
 import {
   makeBodyUniforms, makeGhostMaterial, patchBodyMaterial, patchPartMaterial, patchTailMaterial, type BodyUniforms, type CoverDecals, type Fabric,
 } from './bodyShader'
-import { buildCollar, DEFAULT_NECK } from './collar'
+import { buildCollar, DEFAULT_NECK, NECK_AXIS, scaleLoop } from './collar'
 import { makeHairShells } from './hairShells'
 import { createTether } from './tether'
 import type { HeadModel } from './headModel'
 import { HEAD_IN_HELMET, fitSuit, type SuitModel } from './suitModel'
 
 /**
- * Canga dos ombros do macacão que se vê pelo visor do traje: meia elipsoide lisa, com o topo na base da gola, que desce para os
- * dois lados como os ombros e as costas. O macacão de verdade fica escondido (o tórax não pode atravessar o traje); esta peça
- * só existe com o traje fechado. Medidas em unidades do modelo (a mesma escala do corpo).
+ * Com o traje fechado o próprio macacão do astronauta (ombros, peito, costas) aparece pelo visor, mas encolhido em torno do
+ * eixo do pescoço (`INNER_FIT`) e elevado com a cabeça: assim cabe dentro do traje sem atravessá-lo. A gola dessa versão sai de
+ * um laço também encolhido, com o anel do pescoço na medida da pele.
  */
-const YOKE = { y: 1.418 - 0.04, z: -0.06, rx: 0.26, ry: 0.1, rz: 0.1 }
+const INNER_FIT = 0.7
 import { contactShadowTexture, eyeTexture, glowTexture, nameplateTexture, patchTexture } from './textures'
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast
@@ -368,8 +368,11 @@ export function AstronautRig(p: RigProps) {
   const ghost = useRef<THREE.Group>(null)
   const coverMesh = useRef<THREE.Mesh>(null)
   const collarMesh = useRef<THREE.Mesh>(null)
-  const yokeMesh = useRef<THREE.Mesh>(null)
-  const yokeMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#223452', roughness: 0.92, metalness: 0, side: THREE.DoubleSide }), [])
+  const collarInnerGeo = useMemo(
+    () => (variant.collarLoop ? buildCollar(scaleLoop(variant.collarLoop, INNER_FIT), p.head?.neck ?? DEFAULT_NECK, SYS_INDEX.immune) : null),
+    [variant, p.head],
+  )
+  const collarInnerMesh = useRef<THREE.Mesh>(null)
   const suitMesh = useRef<THREE.Mesh>(null)
   // O traje é ajustado a este corpo (pose, tamanho, feminino ou masculino) quando o modelo chega e o navegador está livre
   const [suitReady, setSuitReady] = useState(false)
@@ -546,7 +549,7 @@ export function AstronautRig(p: RigProps) {
   }
 
   // O dosímetro do braço abre a radiação e tem prioridade sobre o corpo. O estado da radiação
-  // também fica no botão "Radiation" do dock, já que não há mais aura em volta do corpo.
+  // fica na lista de sistemas ao lado do corpo, como o dos outros sistemas (não há aura em volta do corpo).
   const radiation = (e: ThreeEvent<PointerEvent | MouseEvent>, kind: 'move' | 'out' | 'click') => {
     if (p.lineup || !p.focused || p.suit) return
     if (kind === 'out') return onBodyOut()
@@ -639,13 +642,15 @@ export function AstronautRig(p: RigProps) {
     const inner = st.suit > 0.999 && st.xray < 0.05
     u.uInner.value = inner ? 1 : 0
     const collarUp = inner ? HEAD_IN_HELMET.lift / NORM_SCALE : 0
-    // O macacão some por baixo do traje (o tórax não pode atravessá-lo); ficam o funil da gola e a canga dos ombros
-    if (coverMesh.current) coverMesh.current.visible = st.suit < 0.999
-    if (yokeMesh.current) {
-      yokeMesh.current.visible = inner
-      yokeMesh.current.position.set(0, YOKE.y + collarUp, YOKE.z)
+    // Dentro do traje o macacão encolhe em torno do pescoço e sobe com a cabeça, com a gola encolhida junto
+    if (coverMesh.current) {
+      coverMesh.current.visible = st.suit < 0.999 || inner
+      coverMesh.current.scale.set(inner ? INNER_FIT : 1, 1, inner ? INNER_FIT : 1)
+      coverMesh.current.position.set(inner ? NECK_AXIS.x * (1 - INNER_FIT) : 0, collarUp, inner ? NECK_AXIS.z * (1 - INNER_FIT) : 0)
     }
-    if (collarMesh.current) { collarMesh.current.visible = st.suit < 0.999 || inner; collarMesh.current.position.y = collarUp }
+    if (collarMesh.current) collarMesh.current.visible = st.suit < 0.999
+    if (collarInnerMesh.current) collarInnerMesh.current.visible = inner && st.suit > 0.999
+    if (collarInnerMesh.current) collarInnerMesh.current.position.y = collarUp
 
     // Dissolução da região selecionada
     // Com o traje vestido não há dissolução por região: só a visão padrão
@@ -776,9 +781,7 @@ export function AstronautRig(p: RigProps) {
         {!p.head && <mesh geometry={variant.head} material={mats.skin} frustumCulled={false} />}
         <mesh ref={coverMesh} geometry={variant.cover} material={mats.cover} frustumCulled={false} />
         {collarGeo && <mesh ref={collarMesh} geometry={collarGeo} material={mats.cover} frustumCulled={false} />}
-        <mesh ref={yokeMesh} material={yokeMat} scale={[YOKE.rx, YOKE.ry, YOKE.rz]} visible={false} frustumCulled={false} raycast={noRaycast}>
-          <sphereGeometry args={[1, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        </mesh>
+        {collarInnerGeo && <mesh ref={collarInnerMesh} geometry={collarInnerGeo} material={mats.cover} visible={false} frustumCulled={false} raycast={noRaycast} />}
         {/* Fantasma do raio-X: o corpo sólido se dissolve e esta casca de luz fica no lugar */}
         <group ref={ghost} visible={false}>
           <mesh geometry={variant.skin} material={mats.ghostSkin} frustumCulled={false} renderOrder={6} />

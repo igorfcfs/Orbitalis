@@ -447,8 +447,8 @@ export function patchBodyMaterial(mat: THREE.Material, u: BodyUniforms, mode: Sh
         #if defined(BODY_COVER) || defined(BODY_SKIN) || defined(BODY_HAIR)
           bool innerKeep = false;
           #ifdef BODY_COVER
-            // Com o traje fechado a gola do macacão fica por dentro do capacete, visível pelo visor
-            innerKeep = uInner > 0.5 && vBase.y > 1.425 && abs(vBase.x) < 0.085 && vBase.z < 0.09;
+            // Com o traje fechado a parte de cima do macacão (peito, ombros, costas) fica por dentro do traje, visível pelo visor
+            innerKeep = uInner > 0.5 && vBase.y > 1.22;
           #endif
           if (vWY < uSuitY && !innerKeep) discard;
           gEdge = innerKeep ? 0.0 : smoothstep(0.04, 0.0, vWY - uSuitY);
@@ -464,6 +464,10 @@ export function patchBodyMaterial(mat: THREE.Material, u: BodyUniforms, mode: Sh
         if (rev > 0.001) { float d = nz - rev * 1.2; if (d < 0.0) discard; dEdge = smoothstep(0.10, 0.0, d); }
         if (uFade > 0.001) { float d = nz - (uFade * 1.25 - 0.12); if (d < 0.0) discard; fEdge = smoothstep(0.08, 0.0, d); }`)
       .replace('#include <color_fragment>', `#include <color_fragment>
+        #ifdef BODY_SUIT
+          // O lado de dentro do traje (visto pelo visor) é o macacão do astronauta, não o tecido branco do modelo vazio
+          if (!gl_FrontFacing) diffuseColor.rgb = vec3(0.045, 0.085, 0.17);
+        #endif
         #ifdef BODY_HEAD
           if (uFatigue > 0.001) {
             vec2 q = vec2(abs(vBase.x) - uEyeC.x, vBase.y - (uEyeC.y - 0.017)) / vec2(0.02, 0.0105);
