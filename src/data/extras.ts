@@ -14,6 +14,7 @@ export const EXTRA_METRIC: Record<string, MetricExtra> = {
   acuity: { heritage: 'Vision checks performed on the ISS', minutes: 5, plain: 'How sharp your sight is. 1.0 is normal. A drop is the symptom that matters for mission work.' },
   wbc: { heritage: 'CSA Bio-Analyzer on the ISS', minutes: 15, plain: 'The total count of white blood cells, your defense against infection.' },
   lymph: { heritage: 'CSA Bio-Analyzer on the ISS', minutes: 0, plain: 'The white cells that coordinate the fight against viruses. Low counts are a flag to watch, not a diagnosis.' },
+  temp: { heritage: 'Worn on the ISS (CSA Bio-Monitor)', minutes: 0, plain: 'Your body temperature from the wearable sensor. A rise is the earliest sign of infection or heat strain, and it can affect several systems at once.' },
   energy: { heritage: 'Food logging on the ISS', minutes: 2, plain: 'How much of the energy you burn you actually ate. Below 100% the body breaks down its own tissue.' },
   mass: { heritage: 'SLAMMD on the ISS', minutes: 5, plain: 'Your body mass. Weight does not exist in orbit, so it is measured by how you move on a spring.' },
   glucose: { heritage: 'Point-of-care blood tests on the ISS', minutes: 5, plain: 'Blood sugar before the first meal. An early sign of how well the body handles energy while inactive.' },
@@ -25,15 +26,15 @@ export const EXTRA_METRIC: Record<string, MetricExtra> = {
   space_weather: { heritage: 'NASA DONKI public feed (CCMC)', minutes: 0, plain: 'How many fast protons from the Sun are passing the craft. A sharp rise means a solar storm, and a reason to shelter.' },
 }
 
-type SystemExtra = Pick<SystemDef, 'region' | 'evidence' | 'hotspotOffset'>
+type SystemExtra = Pick<SystemDef, 'region' | 'role' | 'hazards' | 'evidence' | 'hotspotOffset'>
 
 export const EXTRA_SYSTEM: Record<SystemId, SystemExtra> = {
-  cardiovascular: { region: 'Heart and vessels', hotspotOffset: [0.05, 0, 0.1], evidence: 'Aerobic capacity has its own requirement, NASA-STD-3001 [V1 4003]. Aerobic sessions use T2 or CEVIS at 70–90% of maximum heart rate.' },
-  skeletal: { region: 'Skeleton, hip focus', hotspotOffset: [-0.1, 0, 0.1], evidence: 'Lower-limb bone loss is about 0.8% per month in flight (Stavnichuk et al., 2020, npj Microgravity). Vitamin D at 800 IU/day has been the ISS standard since 2006.' },
-  muscular: { region: 'Thighs, calves, arms', hotspotOffset: [0.04, 0, 0.1], evidence: 'On the ISS, T2 was used on 47% of days and CEVIS on 37% (NASA HRP evidence report). Strength has its own requirement, [V1 4024].' },
-  neuro_ocular: { region: 'Eyes and optic nerve', hotspotOffset: [0.05, -0.02, 0.1], evidence: 'Spaceflight-associated neuro-ocular syndrome (SANS) is a red risk in the NASA Human Research Program, even though the challenge brief does not name it.' },
-  immune: { region: 'Lymph nodes and spleen', hotspotOffset: [-0.04, 0, 0.1], evidence: 'Blood counts come from the Bio-Analyzer, which returns cell counts on board in 2–3 hours. Reference ranges are terrestrial, and labeled as such.' },
-  nutrition: { region: 'Digestive tract', hotspotOffset: [0.05, 0, 0.1], evidence: 'Energy intake has its own requirement, NASA-STD-3001 [V1 4020]. Nutrition is a red risk in the Human Research Program.' },
-  behavior: { region: 'Brain', hotspotOffset: [-0.07, 0.07, 0.04], evidence: 'Behavioral health and performance is a red risk in the Human Research Program. Cognition is tracked with the same test battery flown on the ISS.' },
-  radiation: { region: 'Whole body', hotspotOffset: [0, 0, 0], evidence: 'The RAD instrument measured 1.8 mSv/day on the Mars Science Laboratory cruise (SwRI). Career dose is limited by NASA-STD-3001 [V1 4030].' },
+  cardiovascular: { region: 'Heart and vessels', role: 'Moves blood, oxygen and heat to every tissue.', hazards: ['gravity'], hotspotOffset: [0.05, 0, 0.1], evidence: 'Aerobic capacity has its own requirement, NASA-STD-3001 [V1 4003]. Aerobic sessions use T2 or CEVIS at 70–90% of maximum heart rate.' },
+  skeletal: { region: 'Skeleton, hip focus', role: 'Carries your weight, protects the organs and stores calcium.', hazards: ['gravity'], hotspotOffset: [-0.1, 0, 0.1], evidence: 'Lower-limb bone loss is about 0.8% per month in flight (Stavnichuk et al., 2020, npj Microgravity). Vitamin D at 800 IU/day has been the ISS standard since 2006.' },
+  muscular: { region: 'Thighs, calves, arms', role: 'Moves and steadies the body, and keeps load on the bones.', hazards: ['gravity'], hotspotOffset: [0.04, 0, 0.1], evidence: 'On the ISS, T2 was used on 47% of days and CEVIS on 37% (NASA HRP evidence report). Strength has its own requirement, [V1 4024].' },
+  neuro_ocular: { region: 'Eyes and optic nerve', role: 'Turns light into the signals the brain sees.', hazards: ['gravity'], hotspotOffset: [0.05, -0.02, 0.1], evidence: 'Spaceflight-associated neuro-ocular syndrome (SANS) is a red risk in the NASA Human Research Program, even though the challenge brief does not name it.' },
+  immune: { region: 'Lymph nodes and spleen', role: 'Fights infection and keeps inflammation in check.', hazards: ['environment', 'isolation'], hotspotOffset: [-0.04, 0, 0.1], evidence: 'Blood counts come from the Bio-Analyzer, which returns cell counts on board in 2–3 hours. Reference ranges are terrestrial, and labeled as such.' },
+  nutrition: { region: 'Digestive tract', role: 'Turns food into the energy and material the body runs on.', hazards: ['distance'], hotspotOffset: [0.05, 0, 0.1], evidence: 'Energy intake has its own requirement, NASA-STD-3001 [V1 4020]. Nutrition is a red risk in the Human Research Program.' },
+  behavior: { region: 'Brain', role: 'Sleep, attention, memory and mood: how you think and feel.', hazards: ['isolation', 'distance'], hotspotOffset: [-0.07, 0.07, 0.04], evidence: 'Behavioral health and performance is a red risk in the Human Research Program. Cognition is tracked with the same test battery flown on the ISS.' },
+  radiation: { region: 'Whole body', role: 'Not an organ: the dose your whole body absorbs, against a lifetime limit.', hazards: ['radiation'], hotspotOffset: [0, 0, 0], evidence: 'The RAD instrument measured 1.8 mSv/day on the Mars Science Laboratory cruise (SwRI). Career dose is limited by NASA-STD-3001 [V1 4030].' },
 }

@@ -149,13 +149,28 @@ export const systemStatus = (astro: Astronaut, system: SystemId, sim: Sim): Stat
 export const astronautStatus = (astro: Astronaut, sim: Sim): Status =>
   worst(SYSTEM_IDS.map((s) => systemStatus(astro, s, sim)))
 
+const RANK: Record<Status, number> = { nominal: 0, watch: 1, critical: 2 }
+
+/** Métricas que dão ao sistema o status dele (até 2), para a lista dizer o que está fora. Sistema nominal: nenhuma. */
+export function systemDrivers(astro: Astronaut, system: SystemId, sim: Sim): ResolvedMetric[] {
+  const metrics = systemMetrics(astro, system, sim)
+  const status = worst(metrics.map((m) => m.status))
+  return status === 'nominal' ? [] : metrics.filter((m) => m.status === status).slice(0, 2)
+}
+
+/** Sistemas fora do nominal, do pior para o melhor, com o desempate da ação prioritária. */
+export function attentionSystems(astro: Astronaut, sim: Sim): { system: SystemId; status: Status }[] {
+  return PRIORITY_ORDER.map((system) => ({ system, status: systemStatus(astro, system, sim) }))
+    .filter((x) => x.status !== 'nominal')
+    .sort((a, b) => RANK[b.status] - RANK[a.status])
+}
+
 /** Sistema de pior status; desempate pela ordem de risco. Nenhum → sem ação. */
 export function prioritySystem(astro: Astronaut, sim: Sim): SystemId | null {
-  const rank: Record<Status, number> = { nominal: 0, watch: 1, critical: 2 }
   let best: SystemId | null = null
   let bestRank = 0
   for (const s of PRIORITY_ORDER) {
-    const r = rank[systemStatus(astro, s, sim)]
+    const r = RANK[systemStatus(astro, s, sim)]
     if (r > bestRank) {
       best = s
       bestRank = r

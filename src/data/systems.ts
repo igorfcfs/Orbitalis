@@ -1,4 +1,4 @@
-import type { MetricDef, SystemDef, SystemId } from '../types'
+import type { Hazard, MetricDef, SystemDef, SystemId } from '../types'
 import { EXTRA_METRIC, EXTRA_SYSTEM } from './extras'
 import { RULES } from './rules'
 
@@ -81,6 +81,12 @@ const BASE_METRICS: Record<string, BaseMetric> = {
     instrument: INSTR.analyzer, how: 'Same blood sample as leukocytes. No extra step.',
     why: 'Lymphocytes coordinate defense against viruses. Low counts are a flag, not a diagnosis.',
   },
+  temp: {
+    id: 'temp', system: 'immune', label: 'Body temperature', unit: '°C', decimals: 1, baseline: 36.6, typical: 36.7,
+    provenance: 'CONTINUOUS', threshold: { kind: 'provisional', text: 'Provisional threshold 36.0–37.5 °C', range: [36, 37.5] },
+    instrument: INSTR.astroskin, how: 'Read by the wearable sensor through the day. No action needed to collect it.',
+    why: 'A fever is often the first sign of infection, and it can cross several systems at once, so it is checked every day.',
+  },
   energy: {
     id: 'energy', system: 'nutrition', label: 'Energy intake', unit: '% of need', decimals: 0, baseline: 100, typical: 103,
     provenance: 'LOGGED', threshold: { kind: 'nasa', id: 'V1 4020', text: 'NASA-STD-3001 [V1 4020] 100%', limit: 100 },
@@ -137,7 +143,7 @@ const BASE_METRICS: Record<string, BaseMetric> = {
   },
 }
 
-type BaseSystem = Omit<SystemDef, 'region' | 'evidence' | 'hotspotOffset'>
+type BaseSystem = Omit<SystemDef, 'region' | 'role' | 'hazards' | 'evidence' | 'hotspotOffset'>
 const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
   cardiovascular: {
     id: 'cardiovascular', name: 'Cardiovascular',
@@ -185,14 +191,14 @@ const BASE_SYSTEMS: Record<SystemId, BaseSystem> = {
   },
   immune: {
     id: 'immune', name: 'Immune',
-    mechanism: 'Spaceflight stress and disrupted sleep change how immune cells behave. Blood counts show whether cell levels stay inside the usual terrestrial range.',
+    mechanism: 'Spaceflight stress and disrupted sleep change how immune cells behave. Blood counts show whether cell levels stay inside the usual terrestrial range, and body temperature catches a fever early.',
     summary: {
-      nominal: 'Blood cell counts are inside the usual terrestrial range.',
-      watch: 'A cell count is below the usual range. Collect a fresh blood sample.',
-      critical: 'Blood counts are well outside range. Act now.',
+      nominal: 'Blood counts and body temperature are inside their usual ranges.',
+      watch: 'A blood count or body temperature is outside its usual range. Collect a fresh blood sample.',
+      critical: 'Blood counts or body temperature are far outside range. Act now.',
     },
     actions: ['IMM-SAMPLE', 'EARTH-PACKET'], hotspot: [-0.2, 1.42, 0.08],
-    focus: { target: [0, 1.4, 0.03], distance: 1.5 }, metrics: ['wbc', 'lymph'],
+    focus: { target: [0, 1.4, 0.03], distance: 1.5 }, metrics: ['wbc', 'lymph', 'temp'],
   },
   nutrition: {
     id: 'nutrition', name: 'Nutrition',
@@ -238,6 +244,22 @@ export const SYSTEMS = Object.fromEntries(
 ) as Record<SystemId, SystemDef>
 
 export const SYSTEM_IDS = Object.keys(SYSTEMS) as SystemId[]
+
+/**
+ * Ordem da lista de sistemas ao lado do corpo: da cabeça aos pés, como o corpo que está ao lado
+ * (cérebro, olhos, pescoço, tórax, abdômen, quadril, membros), e a radiação, que é o corpo inteiro, por último.
+ */
+export const BODY_ORDER: SystemId[] = [
+  'behavior', 'neuro_ocular', 'immune', 'cardiovascular', 'nutrition', 'skeletal', 'muscular', 'radiation',
+]
+
+export const HAZARD_LABEL: Record<Hazard, string> = {
+  radiation: 'Space radiation',
+  isolation: 'Isolation and confinement',
+  distance: 'Distance from Earth',
+  gravity: 'Altered gravity',
+  environment: 'Hostile, closed environment',
+}
 
 /** Desempate da ação prioritária (spec §6) */
 export const PRIORITY_ORDER: SystemId[] = [

@@ -4,7 +4,7 @@ import type { Astronaut } from '../types'
 // os overrides só definem os valores do dia 142 e quando cada exame foi feito pela última vez.
 export const ASTRONAUTS: Astronaut[] = [
   {
-    id: 'lena', initials: 'LM', name: 'Lena Moreau', role: 'Commander', look: { skin: '#dbab8e', hair: '#5a3524', eyes: '#4f7fa8', build: 'female', accent: '#4f8cff' }, heightM: 1.7, tempBaseline: 36.6, tempNow: 36.7,
+    id: 'lena', initials: 'LM', name: 'Lena Moreau', role: 'Commander', look: { skin: '#dbab8e', hair: '#5a3524', eyes: '#4f7fa8', build: 'female', accent: '#4f8cff' }, heightM: 1.7,
     headline: {
       nominal: 'All systems on baseline.',
       watch: 'Career radiation dose is on course to reach its limit before arrival.',
@@ -14,10 +14,11 @@ export const ASTRONAUTS: Astronaut[] = [
       career_dose: { baseline: 330, value: 585.6 },
       mass: { baseline: 64, value: 62.9 },
       disc: { lastTaken: 126 },
+      temp: { baseline: 36.6, value: 36.7 },
     },
   },
   {
-    id: 'rafael', initials: 'RD', name: 'Rafael Duarte', role: 'Flight Engineer', look: { skin: '#c58b62', hair: '#17110e', eyes: '#4a2f1b', build: 'male', accent: '#a37bff' }, heightM: 1.82, tempBaseline: 36.5, tempNow: 36.5,
+    id: 'rafael', initials: 'RD', name: 'Rafael Duarte', role: 'Flight Engineer', look: { skin: '#c58b62', hair: '#17110e', eyes: '#4a2f1b', build: 'male', accent: '#a37bff' }, heightM: 1.82,
     headline: {
       nominal: 'All systems on baseline.',
       watch: 'Exercise has slipped from plan, and bone and muscle are starting to pay for it.',
@@ -29,10 +30,11 @@ export const ASTRONAUTS: Astronaut[] = [
       exercise: { value: 72 },
       mass: { baseline: 82, value: 80.6 },
       career_dose: { baseline: 210, value: 465.6 },
+      temp: { baseline: 36.5, value: 36.5 },
     },
   },
   {
-    id: 'aiko', initials: 'AS', name: 'Aiko Sato', role: 'Crew Medical Officer', isCMO: true, look: { skin: '#deb597', hair: '#1d1513', eyes: '#3b2518', build: 'female', accent: '#dfe6f7' }, heightM: 1.62, tempBaseline: 36.6, tempNow: 36.8,
+    id: 'aiko', initials: 'AS', name: 'Aiko Sato', role: 'Crew Medical Officer', isCMO: true, look: { skin: '#deb597', hair: '#1d1513', eyes: '#3b2518', build: 'female', accent: '#dfe6f7' }, heightM: 1.62,
     headline: {
       nominal: 'All systems on baseline.',
       watch: 'Energy intake is drifting down toward the requirement.',
@@ -43,10 +45,11 @@ export const ASTRONAUTS: Astronaut[] = [
       energy: { value: 100.6, from: 104 },
       mass: { baseline: 58, value: 56.9, lastTaken: 133 },
       career_dose: { baseline: 180, value: 435.6 },
+      temp: { baseline: 36.6, value: 36.8 },
     },
   },
   {
-    id: 'daniel', initials: 'DO', name: 'Daniel Osei', role: 'Mission Specialist', look: { skin: '#70483a', hair: '#0f0c0b', eyes: '#47290f', build: 'male', accent: '#6ec1e4' }, heightM: 1.78, tempBaseline: 36.7, tempNow: 36.7,
+    id: 'daniel', initials: 'DO', name: 'Daniel Osei', role: 'Mission Specialist', look: { skin: '#70483a', hair: '#0f0c0b', eyes: '#47290f', build: 'male', accent: '#6ec1e4' }, heightM: 1.78,
     headline: {
       nominal: 'All systems on baseline.',
       watch: 'Mild optic disc swelling, and lymphocytes are below the usual range.',
@@ -58,6 +61,7 @@ export const ASTRONAUTS: Astronaut[] = [
       wbc: { lastTaken: 126 },
       mass: { baseline: 78, value: 76.8 },
       career_dose: { baseline: 140, value: 395.6 },
+      temp: { baseline: 36.7, value: 36.7 },
     },
   },
 ]

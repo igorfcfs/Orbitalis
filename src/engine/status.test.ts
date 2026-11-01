@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { ASTRONAUTS } from '../data/astronauts'
 import { RULES } from '../data/rules'
-import { SYSTEM_IDS } from '../data/systems'
+import { BODY_ORDER, SYSTEM_IDS } from '../data/systems'
 import {
-  astronautStatus, getAstronaut, prioritySystem, resolveMetric, systemActions, systemStatus,
+  astronautStatus, attentionSystems, getAstronaut, prioritySystem, resolveMetric, systemActions, systemDrivers, systemStatus,
 } from '../lib/model'
 import type { Sim, Status, SystemId } from '../types'
 import { evaluateMetric } from './status'
@@ -109,6 +109,30 @@ describe('regras 3 a 7', () => {
   })
   it('nominal não tem ação', () => {
     expect(systemActions(byId.lena, 'cardiovascular', sim)).toEqual([])
+  })
+})
+
+describe('temperatura corporal e a lista de sistemas', () => {
+  it('no dia 142 a temperatura de todos está na faixa (a matriz não muda)', () => {
+    for (const a of ASTRONAUTS) expect(resolveMetric(a, 'temp', sim).status, a.id).toBe('nominal')
+  })
+  it('uma febre deixa o imune e o astronauta em CRITICAL, pelo motor', () => {
+    const s: Sim = { ...sim, measurements: [{ astronautId: 'lena', metric: 'temp', day: 142, value: 38.4, ts: '' }] }
+    expect(resolveMetric(byId.lena, 'temp', s).status).toBe('critical')
+    expect(systemStatus(byId.lena, 'immune', s)).toBe('critical')
+    expect(astronautStatus(byId.lena, s)).toBe('critical')
+  })
+  it('a ordem da lista, da cabeça aos pés, cobre cada sistema uma vez', () => {
+    expect([...BODY_ORDER].sort()).toEqual([...SYSTEM_IDS].sort())
+  })
+  it('a lista diz qual métrica causa o status, e nenhuma num sistema nominal', () => {
+    expect(systemDrivers(byId.aiko, 'behavior', sim).map((m) => m.id)).toEqual(['sleep'])
+    expect(systemDrivers(byId.lena, 'cardiovascular', sim)).toEqual([])
+  })
+  it('as placas da Crew trazem os sistemas fora do nominal, do pior para o melhor', () => {
+    expect(attentionSystems(byId.aiko, sim)).toEqual([{ system: 'behavior', status: 'critical' }, { system: 'nutrition', status: 'watch' }])
+    expect(attentionSystems(byId.daniel, sim).map((x) => x.system)).toEqual(['neuro_ocular', 'immune'])
+    expect(attentionSystems(byId.lena, sim).map((x) => x.system)).toEqual(['radiation'])
   })
 })
 

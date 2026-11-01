@@ -12,6 +12,9 @@ export type SystemId =
 
 export type Provenance = 'CONTINUOUS' | 'PERIODIC' | 'ESTIMATED' | 'LOGGED' | 'LIVE' | 'SAMPLE'
 
+/** Os cinco riscos do voo espacial mapeados pelo Human Research Program da NASA */
+export type Hazard = 'radiation' | 'isolation' | 'distance' | 'gravity' | 'environment'
+
 export interface Threshold {
   kind: 'nasa' | 'provisional' | 'clinical'
   /** ID do requisito NASA-STD-3001, quando oficial */
@@ -80,6 +83,10 @@ export interface SystemDef {
   id: SystemId
   name: string
   region: string
+  /** Para que serve o sistema, numa frase (o enunciado pede "função e status" de cada parte do corpo) */
+  role: string
+  /** Riscos do HRP que mais pesam sobre o sistema */
+  hazards: Hazard[]
   mechanism: string
   evidence: string
   summary: Record<Status, string>
@@ -129,8 +136,6 @@ export interface Astronaut {
   isCMO?: boolean
   look: Look
   heightM: number
-  tempBaseline: number
-  tempNow: number
   headline: Record<Status, string>
   overrides: Record<string, MetricOverride>
 }

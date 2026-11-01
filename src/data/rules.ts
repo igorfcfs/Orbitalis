@@ -46,6 +46,10 @@ export const RULES: Record<string, { rule: Rule; cadence: Cadence }> = {
     rule: { dir: 'range', range: [1, 4.8], critRange: [0.5, 8] },
     cadence: { mode: 'periodic', step: 14, group: 'blood', plausible: [0.1, 15] },
   },
+  temp: {
+    rule: { dir: 'range', range: [36, 37.5], critRange: [35, 38] },
+    cadence: { mode: 'continuous', step: 2, plausible: [33, 43] },
+  },
   energy: {
     rule: { dir: 'min', official: true, limit: 100, margin: 1.5 },
     cadence: { mode: 'continuous', step: 2, plausible: [20, 200] },
@@ -87,6 +91,6 @@ export const RULES: Record<string, { rule: Rule; cadence: Cadence }> = {
 /** Amplitude absoluta do ruído sintético por métrica (unidade da métrica). Zero = série lisa. */
 export const NOISE: Record<string, number> = {
   rhr: 1.2, sbp: 2.5, vo2: 1.2, bmd: 0, fn: 0, strength: 0.8, exercise: 6, disc: 0, acuity: 0.03,
-  wbc: 0.4, lymph: 0.12, energy: 0.8, mass: 0.25, glucose: 2, sleep: 0.35, cognition: 1.2, mood: 0.25,
+  wbc: 0.4, lymph: 0.12, temp: 0.12, energy: 0.8, mass: 0.25, glucose: 2, sleep: 0.35, cognition: 1.2, mood: 0.25,
   mission_dose: 0, career_dose: 0, space_weather: 0,
 }
