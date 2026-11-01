@@ -23,7 +23,9 @@ import { RadiationParticles } from './Particles'
 type V3 = [number, number, number]
 
 const LINEUP_X: Record<string, number> = { lena: -1.95, rafael: -0.65, aiko: 0.65, daniel: 1.95 }
-const PANEL_PX = 424
+/** Painel de detalhe à direita e lista de sistemas à esquerda, com as margens (--panel-w e --rail-w em styles.css) */
+const PANEL_PX = 464
+const RAIL_PX = 256
 
 // ---------- Câmera ----------
 
@@ -48,9 +50,10 @@ function CameraRig({ lineup, selected, xray, suit }: { lineup: boolean; selected
   useFrame(({ pointer }, dt) => {
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const wide = size.width >= 1024
-    // Desloca a imagem para o corpo ficar no centro da área livre (sem o painel)
-    const tx = !lineup && wide ? PANEL_PX / 2 : 0
-    const ty = lineup ? -size.height * 0.085 : !wide ? size.height * 0.2 : 0
+    // Desloca a imagem para o corpo ficar no centro da área livre, entre a lista de sistemas e o painel
+    const tx = !lineup && wide ? (PANEL_PX - RAIL_PX) / 2 : 0
+    // Tela estreita: o corpo fica entre a faixa de sistemas (no alto) e o painel (metade de baixo)
+    const ty = lineup ? -size.height * 0.085 : !wide ? size.height * 0.185 : 0
     const ks = 1 - Math.exp(-dt * 4)
     shift.current.x += (tx - shift.current.x) * ks
     shift.current.y += (ty - shift.current.y) * ks
@@ -80,7 +83,7 @@ function CameraRig({ lineup, selected, xray, suit }: { lineup: boolean; selected
     tmpC.normalize()
     // Ao voltar do lineup, olha de frente
     if (timer.current < 0.05) tmpC.lerp(new THREE.Vector3(0, 0.12, 1).normalize(), 0.5).normalize()
-    tmpA.copy(controls.target).addScaledVector(tmpC, f.distance * (wide ? 1 : 1.3))
+    tmpA.copy(controls.target).addScaledVector(tmpC, f.distance * (wide ? 1 : 1.6))
     camera.position.lerp(tmpA, k)
     camera.lookAt(controls.target)
   })
@@ -222,6 +225,7 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
   const hoverSys = useStore((s) => s.hoverSys)
+  const railSys = useStore((s) => s.railSys)
   const hoverCrew = useStore((s) => s.hoverCrew)
   const xray = useStore((s) => s.xray)
   const layers = useStore((s) => s.layers)
@@ -341,7 +345,7 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
               statuses={statuses}
               overall={overall}
               selected={isFocus ? selected : null}
-              hoverSys={isFocus ? hoverSys : null}
+              hoverSys={isFocus ? railSys ?? hoverSys : null}
               suit={isFocus && sim.suit}
               space={isFocus && eva}
               xray={isFocus && xray}

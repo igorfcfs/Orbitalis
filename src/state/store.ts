@@ -48,6 +48,8 @@ interface Store extends Persisted {
   hoverLayer: LayerId | null
   /** Sistema sob o cursor no corpo 3D (para o rótulo e o destaque) */
   hoverSys: SystemId | null
+  /** Sistema sob o cursor (ou com foco) na lista ao lado do corpo: realça a região sem a dica do cursor */
+  railSys: SystemId | null
   /** Astronauta sob o cursor na formação da tripulação */
   hoverCrew: string | null
   menuOpen: boolean
@@ -61,6 +63,7 @@ interface Store extends Persisted {
   setAllLayers: (on: boolean) => void
   setHoverLayer: (id: LayerId | null) => void
   setHoverSys: (s: SystemId | null) => void
+  setRailSys: (s: SystemId | null) => void
   setHoverCrew: (id: string | null) => void
   setMenu: (v: boolean) => void
   setCredits: (v: boolean) => void
@@ -103,6 +106,7 @@ export const useStore = create<Store>((set, get) => {
     ...urlFlags(),
     hoverLayer: null,
     hoverSys: null,
+    railSys: null,
     hoverCrew: null,
     menuOpen: false,
     creditsOpen: false,
@@ -120,6 +124,7 @@ export const useStore = create<Store>((set, get) => {
         return { layers, xray: layers.length > 0 }
       }),
     setHoverSys: (hoverSys) => set((s) => (s.hoverSys === hoverSys ? s : { hoverSys })),
+    setRailSys: (railSys) => set((s) => (s.railSys === railSys ? s : { railSys })),
     setHoverCrew: (hoverCrew) => set((s) => (s.hoverCrew === hoverCrew ? s : { hoverCrew })),
     setMenu: (menuOpen) => set({ menuOpen }),
     setCredits: (creditsOpen) => set({ creditsOpen }),

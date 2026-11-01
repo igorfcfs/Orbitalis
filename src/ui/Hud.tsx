@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react'
 import { ASTRONAUTS } from '../data/astronauts'
-import { SYSTEMS, SYSTEM_IDS } from '../data/systems'
+import { BODY_ORDER, SYSTEMS } from '../data/systems'
 import {
-  LINK_DELAY_MIN, MISSION_DAY, MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, astronautStatus, dueItems, getAstronaut, headline, systemStatus,
+  LINK_DELAY_MIN, MISSION_DAY, MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, astronautStatus, attentionSystems, dueItems, getAstronaut, headline,
+  systemDrivers, systemStatus,
 } from '../lib/model'
 import { go, paths, type Route } from '../lib/route'
 import { ATTRIBUTION, LAYERS } from '../scene/anatomy'
 import { useSim, useStore } from '../state/store'
-import type { Status } from '../types'
+import type { Astronaut, Status } from '../types'
 import { StatusPill } from './primitives'
 
 const WORDS = ['No one', 'One', 'Two', 'Three', 'Four']
@@ -48,22 +49,31 @@ export function Hud() {
 
 // ---------- Tripulação ----------
 
+const firstName = (a: Astronaut) => a.name.split(' ')[0]
+const joinNames = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`)
+
 export function CrewOverlay() {
   const sim = useSim()
   const hoverCrew = useStore((s) => s.hoverCrew)
-  const list = ASTRONAUTS.map((a) => ({ a, status: astronautStatus(a, sim) }))
+  const list = ASTRONAUTS.map((a) => ({ a, status: astronautStatus(a, sim), off: attentionSystems(a, sim) }))
   const critical = list.filter((x) => x.status === 'critical')
   const watch = list.filter((x) => x.status === 'watch')
   const lead = critical[0] ?? watch[0]
-  const others = (critical.length + watch.length) - (lead ? 1 : 0)
   const title = lead
     ? critical.length
       ? <><em className="s-critical">{lead.a.name}</em> needs attention.</>
       : <>{WORDS[watch.length]} on <em className="s-watch">watch</em>.</>
     : <>Everyone is <em className="s-nominal">on baseline</em>.</>
   const first = lead ? headline(lead.a, sim).split(/(?<=\.)\s/)[0] : ''
+  // Quem mais está fora do nominal, pelo nome (cada placa diz o sistema)
+  const otherCrit = critical.filter((x) => x !== lead).map((x) => firstName(x.a))
+  const otherWatch = watch.filter((x) => x !== lead).map((x) => firstName(x.a))
   const sub = lead
-    ? `${first}${others > 0 ? ` ${WORDS[others]} ${others === 1 ? 'other' : 'others'} on watch.` : ''}`
+    ? [
+        critical.length ? first : `${firstName(lead.a)}: ${first}`,
+        otherCrit.length ? `${joinNames(otherCrit)} also ${otherCrit.length === 1 ? 'needs' : 'need'} attention.` : '',
+        otherWatch.length ? `${joinNames(otherWatch)} ${otherWatch.length === 1 ? 'is' : 'are'} on watch.` : '',
+      ].filter(Boolean).join(' ')
     : 'No system is outside its limits.'
   return (
     <>
@@ -71,20 +81,28 @@ export function CrewOverlay() {
         <p className="eyebrow">Crew status</p>
         <h1>{title}</h1>
         <p className="sub">{sub}</p>
-        <p className="crew-hint">Click a crew member to open their body map</p>
       </section>
-      {ASTRONAUTS.map((a) => {
-        const status = list.find((x) => x.a.id === a.id)!.status
-        return (
-          <div key={a.id} data-plate={a.id} className={`plate s-${status}${hoverCrew === a.id ? ' hot' : ''}`} style={{ opacity: 0 }}>
-            <span className="plate-name"><span className="full">{a.name}</span><span className="short">{a.name.split(' ')[0]}</span></span>
+      {list.map(({ a, status, off }) => (
+        <div key={a.id} data-plate={a.id} className={`plate s-${status}${hoverCrew === a.id ? ' hot' : ''}`} style={{ opacity: 0 }}>
+          <span className="plate-head">
+            <span className="plate-name"><span className="full">{a.name}</span><span className="short">{firstName(a)}</span></span>
             <StatusPill status={status} />
-          </div>
-        )
-      })}
+          </span>
+          <span className="plate-sys">
+            {off.length === 0 && <span className="muted">All systems nominal</span>}
+            {off.slice(0, 2).map((x) => (
+              <span key={x.system}><i className={`s-${x.status}`} aria-hidden="true">{STATUS_GLYPH[x.status]}</i>{SYSTEMS[x.system].name}</span>
+            ))}
+            {off.length > 2 && <span className="muted">+{off.length - 2}</span>}
+          </span>
+        </div>
+      ))}
       <nav className="a11y-rail" aria-label="Crew">
-        {ASTRONAUTS.map((a) => (
-          <a key={a.id} href={paths.body(a.id)}>{a.name}, {STATUS_LABEL[list.find((x) => x.a.id === a.id)!.status].toLowerCase()}</a>
+        {list.map(({ a, status, off }) => (
+          <a key={a.id} href={paths.body(a.id)}>
+            {a.name}, {STATUS_LABEL[status].toLowerCase()}
+            {off.length > 0 && `: ${off.map((x) => `${SYSTEMS[x.system].name} ${STATUS_LABEL[x.status].toLowerCase()}`).join(', ')}`}
+          </a>
         ))}
       </nav>
     </>
@@ -93,42 +111,23 @@ export function CrewOverlay() {
 
 // ---------- Corpo: dock, dica sob o cursor, trilho de teclado ----------
 
+/** Controles da cena, só da cena: o estado de cada sistema, inclusive a radiação, fica na lista ao lado do corpo. */
 export function Dock({ route }: { route: Exclude<Route, { level: 0 }> }) {
-  const sim = useSim()
   const suit = useStore((s) => s.suit)
   const xray = useStore((s) => s.xray)
   const setSuit = useStore((s) => s.setSuit)
   const setXray = useStore((s) => s.setXray)
   const atHome = route.level === 1 && route.view === 'home'
-  // A radiação não tem mais aura em volta do corpo: o estado dela fica aqui, com forma e palavra
-  const rad = systemStatus(getAstronaut(route.id), 'radiation', sim)
-  const onRad = route.level !== 1 && route.system === 'radiation'
   return (
-    <div className="dock" role="toolbar" aria-label="Body tools">
+    <div className="dock" role="toolbar" aria-label="View tools">
       <button type="button" className={`dock-btn${suit ? ' on' : ''}`} aria-pressed={suit} aria-label={suit ? 'Take off the EVA suit' : 'Put on the EVA suit'} onClick={() => setSuit(!suit)}>
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5a6.5 6.5 0 0 0-6.5 6.5v2.2c0 3.2 2.1 5.9 5 6.6V20H8.5a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2H13v-2.2c2.9-.7 5-3.4 5-6.6V9A6.5 6.5 0 0 0 12 2.5Zm-4.5 6.8c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5v1.6H7.5V9.3Z" fill="currentColor" /></svg>
         <span>{suit ? 'Take off suit' : 'EVA suit'}</span>
       </button>
-      {!suit && <button type="button" className={`dock-btn${xray ? ' on' : ''}`} aria-pressed={xray} aria-label="X-ray view, all body systems" onClick={() => setXray(!xray)}>
+      {!suit && <button type="button" className={`dock-btn${xray ? ' on' : ''}`} aria-pressed={xray} aria-label="X-ray view, all anatomy layers" onClick={() => setXray(!xray)}>
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3c0 1.2-.7 2.2-1.7 2.7V9h3.2a1 1 0 1 1 0 2H13v2h3.5a1 1 0 1 1 0 2H13v2.3l2.6 3.7a1 1 0 1 1-1.6 1.2L12 19.4 10 22.2a1 1 0 1 1-1.6-1.2l2.6-3.7V15H7.5a1 1 0 1 1 0-2H11v-2H7.5a1 1 0 1 1 0-2h3.2V7.7A3 3 0 0 1 12 2Z" fill="currentColor" /></svg>
         <span>X-ray</span>
       </button>}
-      <button
-        type="button"
-        className={`dock-btn rad s-${rad}${onRad ? ' on' : ''}`}
-        aria-label={`Radiation, ${STATUS_LABEL[rad].toLowerCase()}`}
-        aria-current={onRad ? 'page' : undefined}
-        onClick={() => go(paths.system(route.id, 'radiation'))}
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-          <circle cx="12" cy="12" r="2.1" />
-          {[0, 120, 240].map((a) => (
-            <path key={a} transform={`rotate(${a} 12 12)`} d="M10 8.54 7 3.34A10 10 0 0 1 17 3.34L14 8.54A4 4 0 0 0 10 8.54Z" />
-          ))}
-        </svg>
-        <span>Radiation</span>
-        <b className="dock-status"><i aria-hidden="true">{STATUS_GLYPH[rad]}</i><em>{STATUS_LABEL[rad]}</em></b>
-      </button>
       {!atHome && (
         <button type="button" className="dock-btn" aria-label="Reset view" onClick={() => go(paths.body(route.id))}>
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 0 7 7h-2a5 5 0 1 1-1.5-3.5L13 11h7V4l-2.6 2.6A6.97 6.97 0 0 0 12 5Z" fill="currentColor" /></svg>
@@ -140,8 +139,8 @@ export function Dock({ route }: { route: Exclude<Route, { level: 0 }> }) {
 }
 
 /**
- * Sistemas do atlas. O raio-X liga todos de uma vez; aqui cada um liga, desliga e, com o cursor
- * em cima, aparece inteiro enquanto os outros esmaecem.
+ * Camadas do atlas, só com o raio-X ligado, numa fileira acima do dock: são controles de visualização, não dados.
+ * O raio-X liga todas de uma vez; aqui cada uma liga, desliga e, com o cursor em cima, aparece inteira enquanto as outras esmaecem.
  */
 export function LayersRail() {
   const layers = useStore((s) => s.layers)
@@ -151,10 +150,10 @@ export function LayersRail() {
   const all = layers.length === LAYERS.length
   return (
     <nav className="layers" aria-label="Anatomy layers" onPointerLeave={() => setHover(null)}>
-      <span className="label layers-title">Anatomy</span>
+      <span className="label layers-title">Anatomy layers</span>
       <button type="button" className={`layer-btn all${all ? ' on' : ''}`} aria-pressed={all} onClick={() => setAll(!all)}>
         <i aria-hidden="true" />
-        <span>All systems</span>
+        <span>All</span>
       </button>
       <hr className="layers-sep" />
       {LAYERS.map((l) => {
@@ -208,15 +207,46 @@ export function HoverTip({ route }: { route: Route }) {
   )
 }
 
-/** Alternativa de teclado: lista de sistemas, visível só quando recebe foco. */
-export function SystemRail({ route }: { route: Exclude<Route, { level: 0 }> }) {
+/**
+ * O índice dos dados, ao lado do corpo e da cabeça aos pés: cada sistema com o status em forma e palavra e, fora do nominal,
+ * a métrica que o causa. O corpo é o mapa, a lista é o índice: o cursor numa linha realça a região no corpo (railSys) e o
+ * cursor no corpo marca a linha (hoverSys). Também é a navegação por teclado e o caminho até os dados enquanto a cena carrega.
+ */
+export function SystemsRail({ route }: { route: Exclude<Route, { level: 0 }> }) {
   const sim = useSim()
+  const hoverSys = useStore((s) => s.hoverSys)
+  const setRailSys = useStore((s) => s.setRailSys)
   const astro = getAstronaut(route.id)
+  const open = 'system' in route ? route.system : null
   return (
-    <nav className="a11y-rail" aria-label="Systems">
-      {SYSTEM_IDS.map((s) => (
-        <a key={s} href={paths.system(astro.id, s)}>{SYSTEMS[s].name}, {STATUS_LABEL[systemStatus(astro, s, sim)].toLowerCase()}</a>
-      ))}
+    <nav className="sysrail" aria-label="Body systems" onPointerLeave={() => setRailSys(null)}>
+      <span className="label sysrail-title">Systems</span>
+      <ul>
+        {BODY_ORDER.map((s) => {
+          const st = systemStatus(astro, s, sim)
+          const [driver, ...more] = systemDrivers(astro, s, sim)
+          return (
+            <li key={s}>
+              <a
+                href={paths.system(astro.id, s)}
+                className={`sys-row s-${st}${hoverSys === s ? ' hot' : ''}`}
+                aria-current={open === s ? 'page' : undefined}
+                aria-label={`${SYSTEMS[s].name}, ${STATUS_LABEL[st].toLowerCase()}${driver ? `: ${[driver, ...more].map((m) => m.label).join(', ')}` : ''}`}
+                onPointerEnter={() => setRailSys(s)}
+                onFocus={() => setRailSys(s)}
+                onBlur={() => setRailSys(null)}
+              >
+                <i className="sys-glyph" aria-hidden="true">{STATUS_GLYPH[st]}</i>
+                <span className="sys-name">{SYSTEMS[s].name}</span>
+                <span className="sys-state">
+                  <em>{STATUS_LABEL[st]}</em>
+                  {driver && <span className="sys-drv"> · {driver.label}{more.length > 0 && ` +${more.length}`}</span>}
+                </span>
+              </a>
+            </li>
+          )
+        })}
+      </ul>
     </nav>
   )
 }

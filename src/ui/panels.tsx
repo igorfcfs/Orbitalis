@@ -8,7 +8,7 @@ import {
 import { paths } from '../lib/route'
 import { useStore } from '../state/store'
 import type { Astronaut, Measurement, Sim } from '../types'
-import { ActionCard, MetricBadge, NoAction, OfflineTag, StatusPill, ThresholdChip } from './primitives'
+import { ActionCard, Crumbs, MetricBadge, NoAction, OfflineTag, StatusPill, ThresholdChip } from './primitives'
 
 // ---------- Fila do dia (RF-04) ----------
 
@@ -23,7 +23,7 @@ export function QueuePanel({ astro, sim }: { astro: Astronaut; sim: Sim }) {
     .slice(0, 5)
   return (
     <>
-      <a className="back" href={paths.body(astro.id)}>← {astro.name}</a>
+      <Crumbs items={[{ label: astro.name, href: paths.body(astro.id) }]} />
       <div className="panel-head"><h1>Today’s queue</h1></div>
       <p className="muted small">Measurements the schedule is asking for on Day {sim.day}. Each one takes a few minutes and updates your status immediately.</p>
       {due.length ? (
@@ -69,6 +69,11 @@ export function LogPanel({ astro, system, metric, sim }: { astro: Astronaut; sys
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState<string[] | null>(null)
   const back = paths.metric(astro.id, system, metric)
+  const crumbs = [
+    { label: astro.name, href: paths.body(astro.id) },
+    { label: SYSTEMS[def.system].name, href: paths.system(astro.id, system) },
+    { label: def.label, href: back },
+  ]
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,7 +100,7 @@ export function LogPanel({ astro, system, metric, sim }: { astro: Astronaut; sys
   if (saved) {
     return (
       <>
-        <a className="back" href={back}>← {def.label}</a>
+        <Crumbs items={crumbs} />
         <div className="panel-head"><h1>Saved</h1></div>
         <p className="muted small">Recorded at Day {sim.day}. Status was recomputed from the new value.</p>
         {saved.map((id) => {
@@ -123,7 +128,7 @@ export function LogPanel({ astro, system, metric, sim }: { astro: Astronaut; sys
 
   return (
     <>
-      <a className="back" href={back}>← {def.label}</a>
+      <Crumbs items={crumbs} />
       <div className="panel-head"><h1>Log {group === 'blood' ? 'blood sample' : def.label.toLowerCase()}</h1></div>
       <div className="steps">
         <div>
@@ -175,7 +180,7 @@ export function DiaryPanel({ astro }: { astro: Astronaut }) {
   const auto = diary.filter((d) => d.autonomous).length
   return (
     <>
-      <a className="back" href={paths.body(astro.id)}>← {astro.name}</a>
+      <Crumbs items={[{ label: astro.name, href: paths.body(astro.id) }]} />
       <div className="panel-head"><h1>Decision diary</h1></div>
       <p className="muted small">Every action you mark done or snooze, with the status at that moment. Stored on this device only.</p>
       <div className="statgrid">
@@ -237,7 +242,7 @@ export function PacketPanel({ astro, sim }: { astro: Astronaut; sim: Sim }) {
 
   return (
     <>
-      <a className="back" href={paths.body(astro.id)}>← {astro.name}</a>
+      <Crumbs items={[{ label: astro.name, href: paths.body(astro.id) }]} />
       <div className="panel-head"><h1>Flight surgeon packet</h1></div>
       <p className="muted small">What goes to the ground team. Critical items are always included; you choose the rest by flagging a number.</p>
       <div className={`linkbox ${sim.link}`}>

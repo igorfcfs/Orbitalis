@@ -1,4 +1,4 @@
-import { METRICS, SYSTEMS } from '../data/systems'
+import { HAZARD_LABEL, METRICS, SYSTEMS } from '../data/systems'
 import { HORIZON_DAYS } from '../engine/projection'
 import {
   CRUISE_DOSE_RATE, MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, astronautStatus, careerAtArrival, dueItems, estimatedHeight,
@@ -8,9 +8,12 @@ import {
 import { paths, type Route } from '../lib/route'
 import { useFeed } from '../lib/spaceWeather'
 import { useSim, useStore } from '../state/store'
-import type { Astronaut, Sim, Status, SystemId } from '../types'
+import type { Astronaut, ResolvedMetric, Sim, Status, SystemId } from '../types'
 import { DiaryPanel, LogPanel, PacketPanel, QueuePanel } from './panels'
-import { ActionCard, Gauge, MetricBadge, MetricChart, NoAction, OfflineTag, ProvenanceBadge, Reading, StatusPill, ThresholdChip, TrendCompare } from './primitives'
+import {
+  ActionCard, Crumbs, MetricBadge, MetricChart, NoAction, OfflineTag, PROVENANCE_HELP, ProvenanceBadge, Reading, Sparkline, StatusPill,
+  ThresholdChip,
+} from './primitives'
 
 type BodyRoute = Exclude<Route, { level: 0 }>
 
@@ -18,18 +21,71 @@ const STATUS_WORD: Record<Status, string> = { nominal: 'All good', watch: 'On wa
 
 // ---------- Nível 1: o astronauta ----------
 
+/** Os seis indicadores que o enunciado da NASA cita, com rótulo curto para caber na tabela */
+const KEY_INDICATORS: [id: string, label: string][] = [
+  ['rhr', 'Heart rate'], ['sbp', 'Systolic BP'], ['glucose', 'Glucose'],
+  ['temp', 'Temperature'], ['sleep', 'Sleep'], ['mood', 'Mood'],
+]
+
+/** Uma linha da tabela de indicadores: valor, pré-voo e selo alinhados em colunas; fora do nominal, a palavra e o motivo. */
+function Indicator({ astro, m, label }: { astro: Astronaut; m: ResolvedMetric; label: string }) {
+  const setRailSys = useStore((s) => s.setRailSys)
+  const word = STATUS_LABEL[m.status]
+  return (
+    <a
+      className={`ind s-${m.status}`}
+      href={paths.metric(astro.id, m.system, m.id)}
+      aria-label={`${m.label}: ${fmt(m.value, m.decimals)} ${m.unit}, ${word.toLowerCase()}. Pre-flight ${fmt(m.baseline, m.decimals)}, ${m.provenance.toLowerCase()}.`}
+      onPointerEnter={() => setRailSys(m.system)}
+      onPointerLeave={() => setRailSys(null)}
+    >
+      <span className="ind-glyph" aria-hidden="true">{STATUS_GLYPH[m.status]}</span>
+      <span className="ind-label">{label}</span>
+      <span className="ind-val"><span className="num">{fmt(m.value, m.decimals)}</span> <span className="unit">{shortUnit(m.unit)}</span></span>
+      <span className="ind-base mono">{fmt(m.baseline, m.decimals)}</span>
+      <MetricBadge m={m} />
+      {m.status !== 'nominal' && <span className="ind-why"><em>{word}</em> · {m.eval.reason}</span>}
+    </a>
+  )
+}
+
+/** Medições pendentes na própria tela, com o atalho para registrar (até duas; o resto fica na fila). */
+function DueList({ astro, sim }: { astro: Astronaut; sim: Sim }) {
+  const due = dueItems(astro, sim)
+  if (!due.length) return null
+  return (
+    <ul className="due" aria-label="Measurements due">
+      {due.slice(0, 2).map((q) => (
+        <li key={q.key}>
+          <a
+            href={paths.log(astro.id, q.metrics[0].system, q.metrics[0].id)}
+            aria-label={`${q.title} due, last taken Day ${q.lastDay}${q.overdueDays > 0 ? `, ${q.overdueDays} days overdue` : ''}. Log it.`}
+          >
+            <span className="due-name">{q.title} due</span>
+            <span className="due-last mono">last Day {q.lastDay}</span>
+            <span className="due-go" aria-hidden="true">Log</span>
+          </a>
+        </li>
+      ))}
+      {due.length > 2 && (
+        <li><a className="due-more" href={paths.view(astro.id, 'queue')}>{due.length - 2} more in today’s queue</a></li>
+      )}
+    </ul>
+  )
+}
+
 function Home({ astro, sim }: { astro: Astronaut; sim: Sim }) {
   const status = astronautStatus(astro, sim)
   const pa = priorityAction(astro, sim)
-  const due = dueItems(astro, sim).length
   return (
     <>
       <header className="who">
-        <span className={`avatar s-${status}`} aria-hidden="true">{astro.initials}</span>
+        <span className="avatar" aria-hidden="true">{astro.initials}</span>
         <div>
           <h1>{astro.name}</h1>
           <p>{astro.role}</p>
         </div>
+        <StatusPill status={status} />
       </header>
 
       <section className={`verdict s-${status}`} aria-live="polite">
@@ -40,22 +96,27 @@ function Home({ astro, sim }: { astro: Astronaut; sim: Sim }) {
         </div>
       </section>
 
-      <section>
-        <h2 className="label">Today</h2>
+      <section aria-label="Key indicators">
+        <div className="inds">
+          <div className="ind-head" aria-hidden="true">
+            <span className="label">Key indicators</span>
+            <span>Now</span>
+            <span>Pre-flight</span>
+            <span>Source</span>
+          </div>
+          {KEY_INDICATORS.map(([id, label]) => <Indicator key={id} astro={astro} m={resolveMetric(astro, id, sim)} label={label} />)}
+        </div>
+      </section>
+
+      <section aria-labelledby="today-h">
+        <h2 id="today-h" className="label">Today</h2>
         {pa && pa.action ? (
-          <ActionCard astroId={astro.id} action={pa.action} status={systemStatus(astro, pa.system, sim)} />
+          <ActionCard astroId={astro.id} action={pa.action} status={systemStatus(astro, pa.system, sim)} compact />
         ) : (
           <NoAction />
         )}
+        <DueList astro={astro} sim={sim} />
       </section>
-
-      {due > 0 && (
-        <a className="nudge" href={paths.view(astro.id, 'queue')}>
-          <span>{due === 1 ? 'A measurement is due' : `${due} measurements are due`}</span>
-          <span aria-hidden="true">→</span>
-        </a>
-      )}
-      <p className="hint"><i className="hint-dot" aria-hidden="true" />Click the body to see why. Drag to turn.</p>
     </>
   )
 }
@@ -117,19 +178,24 @@ function FeedCard() {
 
 // ---------- Nível 2: o sistema ----------
 
-function Tile({ astro, system, m }: { astro: Astronaut; system: SystemId; m: ReturnType<typeof resolveMetric> }) {
+/** Medidor do nível 2: o valor com a tendência ao lado, o motivo do status e o limite que o julga, sem precisar abrir nada. */
+function Tile({ astro, system, m }: { astro: Astronaut; system: SystemId; m: ResolvedMetric }) {
   return (
-    <a className={`tile s-${m.status}`} href={paths.metric(astro.id, system, m.id)} aria-label={`${m.label}, ${STATUS_LABEL[m.status].toLowerCase()}`}>
+    <a className={`tile s-${m.status}`} href={paths.metric(astro.id, system, m.id)} aria-label={`${m.label}, ${STATUS_LABEL[m.status].toLowerCase()}. ${m.eval.reason}`}>
       <div className="tile-top">
         <span>{m.label}</span>
-        <span className="glyph" aria-hidden="true">{STATUS_GLYPH[m.status]}</span>
+        <StatusPill status={m.status} />
       </div>
-      <Reading m={m} />
-      <Gauge m={m} />
+      <div className="tile-mid">
+        <Reading m={m} />
+        <Sparkline m={m} />
+      </div>
+      <p className="tile-why">{m.eval.reason}</p>
       <div className="tile-foot">
-        <span className="mono">pre-flight {fmt(m.baseline, m.decimals)}</span>
+        <span className="mono">pre-flight {fmt(m.baseline, m.decimals)} {shortUnit(m.unit)}</span>
         <MetricBadge m={m} />
       </div>
+      <ThresholdChip threshold={m.threshold} />
     </a>
   )
 }
@@ -142,19 +208,23 @@ function System({ astro, system, sim }: { astro: Astronaut; system: SystemId; si
   const height = system === 'skeletal' ? estimatedHeight(astro, sim.day) : null
   return (
     <>
-      <a className="back" href={paths.body(astro.id)}>← {astro.name}</a>
+      <Crumbs items={[{ label: astro.name, href: paths.body(astro.id) }]} />
       <header className="sys-head">
         <div>
           <h1>{def.name}</h1>
-          <p>{def.region}</p>
+          <p>{def.region} · {def.role}</p>
         </div>
         <StatusPill status={status} />
       </header>
       <p className="lede-sm">{def.summary[sim.solar && system === 'radiation' ? 'critical' : status]}</p>
-      {system === 'radiation' && <ExposureCard astro={astro} sim={sim} />}
+      <p className="hazards">
+        <span className="label">NASA HRP hazards</span>
+        {def.hazards.map((h) => <span key={h} className="chip">{HAZARD_LABEL[h]}</span>)}
+      </p>
       <div className="tiles">
         {metrics.map((m) => <Tile key={m.id} astro={astro} system={system} m={m} />)}
       </div>
+      {system === 'radiation' && <ExposureCard astro={astro} sim={sim} />}
       {actions.length > 0 && (
         <section>
           <h2 className="label">Do this</h2>
@@ -170,14 +240,6 @@ function System({ astro, system, sim }: { astro: Astronaut; system: SystemId; si
           <p className="small">{def.mechanism}</p>
           <h3 className="label">Evidence</h3>
           <p className="small">{def.evidence}</p>
-          <h3 className="label">Why each number has its status</h3>
-          <ul className="reasons small">
-            {metrics.map((m) => (
-              <li key={m.id}><strong>{m.label}</strong> <StatusPill status={m.status} /><br />{m.eval.reason}</li>
-            ))}
-          </ul>
-          <h3 className="label">Against their pre-flight values</h3>
-          <TrendCompare metrics={metrics} />
           {height && (
             <div className="feed">
               <div className="mr-top"><span className="label">Height</span><span className="prov">ESTIMATED</span></div>
@@ -201,16 +263,17 @@ function Metric({ astro, system, metric, sim }: { astro: Astronaut; system: Syst
   const actions = systemActions(astro, system, sim)
   const flags = useStore((s) => s.flags)
   const toggleFlag = useStore((s) => s.toggleFlag)
+  const feed = useFeed()
   const flagged = !!flags[flagKey(astro.id, metric)]
   const projected = m.eval.projected ?? m.value + st.slope * HORIZON_DAYS
   const trend = `${signed(st.slope, Math.abs(st.slope) < 0.1 ? 3 : 2)} ${shortUnit(m.unit)} per day · ${HORIZON_DAYS}-day projection ${fmt(projected, m.decimals)}`
   return (
     <>
-      <a className="back" href={paths.system(astro.id, system)}>← {SYSTEMS[system].name}</a>
+      <Crumbs items={[{ label: astro.name, href: paths.body(astro.id) }, { label: SYSTEMS[system].name, href: paths.system(astro.id, system) }]} />
       <header className="sys-head">
         <div>
           <h1>{m.label}</h1>
-          <p>{astro.name}</p>
+          <p>{PROVENANCE_HELP[m.id === 'space_weather' && feed.live ? 'LIVE' : m.provenance]}</p>
         </div>
         <StatusPill status={m.status} />
       </header>
@@ -221,6 +284,7 @@ function Metric({ astro, system, metric, sim }: { astro: Astronaut; system: Syst
           pre-flight {fmt(m.baseline, m.decimals)} {shortUnit(m.unit)}
           {st.deltaPct !== null ? ` · ${signed(st.deltaPct, 1)}%` : ''} <MetricBadge m={m} />
         </p>
+        <ThresholdChip threshold={m.threshold} />
       </div>
 
       <MetricChart m={m} day={sim.day} />
@@ -233,10 +297,9 @@ function Metric({ astro, system, metric, sim }: { astro: Astronaut; system: Syst
 
       {actions.length ? <ActionCard astroId={astro.id} action={actions[0]} status={m.status} /> : <NoAction />}
 
-      <details className="why">
+      <details className="why" open>
         <summary>About this number <OfflineTag /></summary>
         <div className="why-body">
-          <ThresholdChip threshold={m.threshold} />
           <h3 className="label">In plain words</h3>
           <p className="small">{m.plain}</p>
           <h3 className="label">Why it matters</h3>

@@ -2,13 +2,14 @@ import { useEffect } from 'react'
 import { go, paths, parentPath, useRoute } from './lib/route'
 import { Stage } from './scene/Stage'
 import { useStore } from './state/store'
-import { CrewOverlay, Credits, Dock, Hud, HoverTip, LayersRail, MenuSheet, SystemRail } from './ui/Hud'
+import { CrewOverlay, Credits, Dock, Hud, HoverTip, LayersRail, MenuSheet, SystemsRail } from './ui/Hud'
 import { Panel } from './ui/Panel'
 import { SourcesScreen } from './ui/SourcesScreen'
 
 export default function App() {
   const route = useRoute()
   const suit = useStore((s) => s.suit)
+  const xray = useStore((s) => s.xray)
   const setSuit = useStore((s) => s.setSuit)
   const setXray = useStore((s) => s.setXray)
 
@@ -48,10 +49,11 @@ export default function App() {
         {route.level === 0 && route.page === 'sources' && <SourcesScreen />}
         {route.level !== 0 && (
           <>
+            {/* O índice dos sistemas vem antes do painel: é o que se lê (e o Tab alcança) primeiro */}
+            <SystemsRail route={route} />
             <Panel route={route} />
+            {!suit && xray && <LayersRail />}
             <Dock route={route} />
-            {!suit && <LayersRail />}
-            <SystemRail route={route} />
           </>
         )}
         <HoverTip route={route} />
