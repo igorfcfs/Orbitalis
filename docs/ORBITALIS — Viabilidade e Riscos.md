@@ -1,8 +1,8 @@
 # ORBITALIS — Viabilidade e riscos
 
-Última avaliação: 2026-10-31T19:55:07-03:00 · HEAD `c600f8f` + 32 arquivos modificados ou novos · modo completo (primeira avaliação)
+Última avaliação: 2026-11-02T09:40:00-03:00 · HEAD `38f66ff` + 21 arquivos modificados ou novos · modo rápido
 Capacidade da equipe: não informada (edite esta linha: pessoas × horas por dia até o evento)
-Evento: 14 de novembro de 2026 (faltam 14 dias)
+Evento: 14 de novembro de 2026 (faltam 12 dias)
 
 Mantido pela skill `orbitalis-viability` (`/orbitalis-viability`): compara o projeto atual com o esperado (CLAUDE.md, spec e enunciado da NASA), diz se o esperado ainda é alcançável e lista o que pode dar problema segundo as diretrizes da NASA. Os fatos da NASA citados aqui estão conferidos em `ORBITALIS — Diretrizes NASA (verificadas).md`; o detalhe dos requisitos está em `ORBITALIS — Status dos Requisitos.md`. Os tamanhos de esforço (S, M, L) são estimativas da skill a partir do código, não da equipe: S = até meio dia, M = 1 a 2 dias, L = 3 dias ou mais (contados como 0,5, 1,5 e 3,5 dias-pessoa).
 
@@ -10,21 +10,21 @@ Mantido pela skill `orbitalis-viability` (`/orbitalis-viability`): compara o pro
 
 | Dimensão | Veredito | Por quê |
 | --- | --- | --- |
-| Técnica | **Viável com cortes** (provisório: capacidade não informada) | Os 15 requisitos obrigatórios estão atendidos, o typecheck está limpo e os 112 testes passam. O que falta é a entrega (≈ 5,5 dias-pessoa) e os propostos RF-18 e RF-28 a RF-33 (≈ 20 dias-pessoa, ou 16,5 sem o cenário foguete). Para 14 dias corridos isso só cabe com mais de uma pessoa ou com cortes |
+| Técnica | **Viável com cortes** (provisório: capacidade não informada) | Os 15 requisitos obrigatórios estão atendidos, o typecheck está limpo, o build passa e os 134 testes passam. RF-18 e RF-23 a RF-27 entraram em 02/11. O que falta é a entrega (≈ 5,5 dias-pessoa) e os propostos RF-28 a RF-33 (≈ 16,5 dias-pessoa, ou 13 sem o cenário foguete). Para 12 dias corridos isso só cabe com mais de uma pessoa ou com cortes |
 | Conformidade | **Em risco** | Dois riscos de severidade alta abertos: R-N01 (o FAQ do Space Apps proíbe começar a trabalhar nos desafios antes do hackathon; o primeiro commit é de 28/10) e R-N04 (a submissão exige a descrição do uso de SI). R-N04 se resolve em meio dia; R-N01 só a organização do evento resolve |
 
 ## 2. Esperado × atual
 
-Primeira avaliação, então não há variação a mostrar.
+Desde 31/10: RF-18 e RF-23 a RF-27 saíram de "não atendido" para atendido (com as ressalvas do documento de status).
 
 | Item | Situação |
 | --- | --- |
 | Obrigatórios (RF-01 a RF-15) | 15 de 15 atendidos |
-| Fortes (RF-16 a RF-22) | 5 atendidos, 1 parcial (RF-20), 1 não atendido (RF-18) |
-| Opcionais (RF-23 a RF-27) | 0 de 5 |
+| Fortes (RF-16 a RF-22) | 6 atendidos, 1 parcial (RF-20) |
+| Opcionais (RF-23 a RF-27) | 5 de 5 |
 | Propostos (RF-28 a RF-33) | 0 de 6 (RF-32 parcial) |
 | Critérios de aceite (CLAUDE.md §15) | 11 atendidos, 3 parciais (atribuição no canvas, número sem selo, setas do teclado), 1 pendente (teste dos 10 segundos) |
-| Qualidade | Typecheck limpo (14 s); 112 de 112 testes em 8 arquivos; feed do DONKI ao vivo (HTTP 200, 15 flares) |
+| Qualidade | Typecheck limpo; build ok; 134 de 134 testes em 9 arquivos (sem a chamada real ao modelo de IA nem a câmera real); feed do DONKI ao vivo (HTTP 200, 15 flares) |
 | Interface (captura de 31/10) | Nível 1 sem rolagem (702/702) e 8 sistemas na lista |
 | Regressões | Nenhuma. Outra sessão alterou `bodyShader.ts` (4 linhas) e `AstronautRig.tsx`: typecheck, testes e a captura do corpo seguem bem |
 
@@ -52,14 +52,13 @@ Total de entrega: 8 S + 1 M ≈ 5,5 dias-pessoa.
 | --- | --- | --- |
 | RF-33 catálogo de emergência e motor por regras (sem IA) | L | validação por médico ou flight surgeon; decisão da regra 3 |
 | RF-29 fluxo de emergência, cenário por sobreposição e registro de sintomas (RF-34) | L | RF-33; ficha clínica sintética |
-| RF-18 camada de IA (rota de servidor, schema, validação, cache) | L | função de servidor se for hospedar |
 | RF-31 perfil da missão (`MissionProfile`) | M | |
 | RF-28 estação espacial e espaço sideral | M | RF-31 |
 | RF-28 base lunar | M | RF-31; fontes para 1/6 g |
 | RF-28 foguete (fase de lançamento) | L | RF-31; outro eixo de tempo |
 | RF-30 CRUD de tripulantes mínimo | M | |
 
-Total dos propostos ≈ 20 dias-pessoa (16,5 sem o foguete). **Ordem de corte sugerida** para os propostos: RF-30, depois RF-28 foguete e base lunar, depois RF-31; RF-18 só depois do motor por regras. Da spec, o que nunca cai: motor determinístico, selos, IDs de requisito, ação por tela e modo autônomo.
+Total dos propostos ≈ 16,5 dias-pessoa (13 sem o foguete). **Ordem de corte sugerida** para os propostos: RF-30, depois RF-28 foguete e base lunar, depois RF-31. A IA do RF-29 reaproveita a camada do RF-18, já pronta, mas continua dependendo do motor por regras (RF-33). Da spec, o que nunca cai: motor determinístico, selos, IDs de requisito, ação por tela e modo autônomo.
 
 ## 4. Riscos segundo as diretrizes da NASA
 
@@ -95,6 +94,8 @@ Os riscos marcados "condicional" só existem se o requisito proposto corresponde
 | R-P05 | Baixa | Regra 10 e modo autônomo | As fontes tipográficas vêm do Google Fonts; sem rede, o app cai para a fonte do sistema, e cada acesso chama um terceiro | `index.html` linhas 8 a 10 | Hospedar Space Grotesk e JetBrains Mono (OFL) em `public/` | Aberto |
 | R-P06 | Média | Processo | 32 arquivos modificados ou novos sem commit (inclui docs e skills), desde 30/10 às 17h39; a memória do projeto registra dois incidentes de perda por edição em lote | `git status` | Rodar `/atomic-commits` (o `AGENTS.md` fica de fora) | Aberto |
 | R-P07 | Média | Planejamento | A capacidade da equipe é desconhecida; o veredito técnico é provisório | Linha `Capacidade da equipe` deste documento | Preencher a linha | Aberto |
+| R-P09 | Média | RF-18, RF-26 e CLAUDE.md §2 (regra 10) | As rotas `/api/explain` e `/api/osdr` são middlewares do Vite, como a do DONKI (R-P04): numa hospedagem estática a IA nunca atua e o OSDR cai sempre para SAMPLE. A IA nunca rodou contra o modelo real, e o uso de IA precisa ser declarado na submissão (R-N04) | `vite.config.ts`; `rf18to27.test.ts` usa `fetch` simulado | Testar uma vez com a chave real; função de servidor equivalente se hospedar, ou declarar a limitação; incluir a IA na descrição do uso de SI | Aberto |
+| R-P10 | Baixa | RF-24 | A câmera foi validada só com sinal sintético; em hardware real o pulso pode falhar (luz, lente, movimento). Falha mostra mensagem e a entrada manual continua | `lib/ppg.ts`, `ui/CameraCheck.tsx` | Testar num celular e num notebook antes de mostrar no vídeo; não depender da câmera na demo | Aberto |
 | R-P08 | Baixa | Documentação | O CLAUDE.md cita `TrackballControls` (§10), que não existe mais (a câmera usa `FreeOrbit`), e `responseSchema` e `allowedActions` (§8), que descrevem a IA ainda não implementada. A skill não edita o CLAUDE.md | `docDrift.unresolved` | O dono corrige o CLAUDE.md | Aberto |
 
 ## 6. Decisões em aberto
@@ -110,4 +111,5 @@ Os riscos marcados "condicional" só existem se o requisito proposto corresponde
 
 | Data | HEAD | Modo | Técnica | Conformidade | Obrigatórios | Testes | Riscos abertos (A/M/B) | Nota |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 02/11/2026 | `38f66ff` (+21) | rápido | Viável com cortes (provisório) | Em risco | 15 de 15 | 134 de 134 | 3 / 13 / 9 | RF-18 e RF-23 a RF-27 entregues. Fontes da NASA não reverificadas (só `vite.config.ts` mudou na área sensível, e o OSDR responde ao vivo) |
 | 31/10/2026 | `c600f8f` (+32) | completo | Viável com cortes (provisório) | Em risco | 15 de 15 | 112 de 112 | 3 / 12 / 9 | Primeira avaliação. Fontes da NASA verificadas em texto integral |

@@ -8,6 +8,7 @@ import type { Provenance } from '../types'
 const SOURCES: { name: string; use: string; href: string }[] = [
   { name: 'NASA-STD-3001 Vol. 1 Rev. C', use: 'Limits with IDs: [V1 4003], [V1 4020], [V1 4024], [V1 4027], [V1 4030]', href: 'https://www.nasa.gov/wp-content/uploads/2023/11/nasa-std-3001-vol-1-rev-c-with-signature.pdf' },
   { name: 'NASA DONKI / CCMC', use: 'Live flares and solar particle events, fetched by the server only', href: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/' },
+  { name: 'NASA OSDR / GeneLab', use: 'Public space biology studies shown as explanatory context per system, fetched by the server only', href: 'https://osdr.nasa.gov/bio/' },
   { name: 'NASA Human Research Program', use: 'Countermeasure protocols and evidence by system', href: 'https://www.nasa.gov/humans-in-space/counteracting-bone-and-muscle-loss-in-microgravity/' },
   { name: 'Human adaptation to spaceflight: the role of nutrition', use: 'Vitamin D 800 IU/day, ISS standard since 2006', href: 'https://www.nasa.gov/wp-content/uploads/2024/10/human-adaptation-to-spaceflight-the-role-of-nutrition.pdf' },
   { name: 'Z-Anatomy / Shandon’s Body Atlas', use: '3D anatomy in six layers, CC BY-SA 4.0', href: 'https://github.com/ryanjardine95/shandons-body-atlas' },
@@ -41,6 +42,18 @@ const COVERAGE: { id: string; text: string; where: string }[] = [
   { id: 'RF-13', text: 'Autonomous mode by default, with blackout simulation', where: 'Link chip and Menu → Simulation' },
   { id: 'RF-14', text: 'Clickable body map', where: 'Click any region of the 3D body' },
   { id: 'RF-15', text: 'Flag what goes to the flight surgeon', where: 'Metric → Flag, and the Packet screen' },
+  { id: 'RF-16', text: 'Decision diary with timestamp, status snapshot and the autonomous mark in blackout', where: 'Menu → Decision diary' },
+  { id: 'RF-17', text: 'Handover packet for the flight surgeon', where: 'Menu → Flight surgeon packet' },
+  { id: 'RF-18', text: 'AI explanation layer with a rule-checked fallback', where: 'System → How it works (AI explanation or Offline explanation)' },
+  { id: 'RF-19', text: 'Live space weather feed (NASA DONKI), with a stored sample as fallback', where: 'Radiation → How it works, LIVE or SAMPLE seal' },
+  { id: 'RF-20', text: 'Graceful degradation: no error on screen when a feed, storage or the face model fails', where: 'Partial: no fallback yet when WebGL is unavailable' },
+  { id: 'RF-21', text: 'Crew Medical Officer as patient: the consult goes to the backup CMO', where: 'Aiko Sato, any critical system' },
+  { id: 'RF-22', text: 'Scenario controls: mission day, solar event, Earth link', where: 'Menu → Simulation' },
+  { id: 'RF-23', text: 'Streak of days with the day’s action done', where: 'Body → Today, and Decision diary' },
+  { id: 'RF-24', text: 'Camera input: pulse from a fingertip over the lens', where: 'Resting heart rate → Check with camera' },
+  { id: 'RF-25', text: 'Crew status across the whole mission', where: 'Menu → Crew timeline' },
+  { id: 'RF-26', text: 'Space biology studies from NASA OSDR', where: 'System → How it works' },
+  { id: 'RF-27', text: 'Outcome of each action: system status then and now', where: 'Decision diary' },
 ]
 
 const PROVS = Object.keys(PROVENANCE_HELP) as Provenance[]
@@ -113,7 +126,7 @@ export function SourcesScreen() {
           <h2 id="decl-h" className="label">Declarations</h2>
           <ul className="decl small">
             <li>The crew is fictional. Apart from the calibrations above, all physiological signals are synthetic and illustrative.</li>
-            <li>Status is computed by deterministic code and never by AI. This build makes no model calls; explanations are fixed catalog text, marked “Offline explanation”.</li>
+            <li>Status is computed by deterministic code and never by AI. Explanations are written by an AI model only when the server has an API key, from numbers the code computed. The model picks actions by ID from the closed catalog, and its text is rejected if it adds a number, names a medication or diagnosis, or breaks the length limits. Without a key, or on any failure, the fixed catalog text is shown, marked “Offline explanation”.</li>
             <li>Actions come from a closed catalog. The app gives no diagnosis, medication or dose.</li>
             <li>Prototype assumption, not a published value: outside the hull only the EVA suit shields you, modeled as twice the 1.8 mSv/day measured inside a spacecraft. Replace it with the mission’s own dosimetry.</li>
             <li>The characters, their hair, eyes, skin and uniforms, the suit and the habitat are drawn for this prototype. The anatomical body is a male atlas model; the two women use reshaped proportions, not a female anatomy model.</li>

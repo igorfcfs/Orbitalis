@@ -492,3 +492,25 @@ tr:last-child td { border-bottom: 0; }
 .hero .sub { margin-top: 10px; font-size: clamp(14px, 1.1vw, 17px); max-width: 720px; }
 .eyebrow { margin-bottom: 8px; }
 .plate { padding: 9px 14px 10px; border-radius: 14px; gap: 6px; }
+
+/* ---------- RF-18, 23, 24, 25, 26, 27 ---------- */
+.offline.ai { color: var(--ink-2); border-color: var(--ink-3); }
+.streak { margin-top: 8px; color: var(--ink-2); }
+.outcome { color: var(--ink-2); }
+.studies { display: grid; gap: 10px; }
+.studies li { display: grid; gap: 2px; }
+.studies a { text-decoration: underline; text-underline-offset: 3px; }
+.camera { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, 0.04); }
+.timeline .legend { display: flex; flex-wrap: wrap; gap: 18px; }
+.timeline .legend i { font-style: normal; }
+.trow { display: grid; gap: 8px; }
+.trow-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; }
+.strip { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(25, minmax(0, 1fr)); gap: 3px; }
+.strip .cell { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.04); font-size: 13px; cursor: pointer; color: inherit; }
+.strip .cell.s-nominal { color: var(--nominal); }
+.strip .cell.s-watch { color: var(--watch); }
+.strip .cell.s-critical { color: var(--critical); }
+.strip .cell:hover { background: rgba(255, 255, 255, 0.12); }
+.strip .cell.now { outline: 2px solid var(--ink); outline-offset: 1px; }
+.trow .axis { display: flex; justify-content: space-between; }
+@media (max-width: 720px) { .strip { grid-template-columns: repeat(13, minmax(0, 1fr)); } .sources { padding: 88px 20px 40px; } }

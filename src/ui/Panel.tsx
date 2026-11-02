@@ -6,12 +6,15 @@ import {
   systemMetrics, systemStatus,
 } from '../lib/model'
 import { paths, type Route } from '../lib/route'
+import { adherenceStreak } from '../lib/adherence'
+import { studyUrl, useStudies } from '../lib/osdr'
 import { useFeed } from '../lib/spaceWeather'
+import { useExplanation } from '../lib/useExplanation'
 import { useSim, useStore } from '../state/store'
 import type { Astronaut, ResolvedMetric, Sim, Status, SystemId } from '../types'
 import { DiaryPanel, LogPanel, PacketPanel, QueuePanel } from './panels'
 import {
-  ActionCard, Crumbs, MetricBadge, MetricChart, NoAction, OfflineTag, PROVENANCE_HELP, ProvenanceBadge, Reading, Sparkline, StatusPill,
+  ActionCard, AiTag, Crumbs, MetricBadge, MetricChart, NoAction, OfflineTag, PROVENANCE_HELP, ProvenanceBadge, Reading, Sparkline, StatusPill,
   ThresholdChip,
 } from './primitives'
 
@@ -74,6 +77,18 @@ function DueList({ astro, sim }: { astro: Astronaut; sim: Sim }) {
   )
 }
 
+/** Sequência de adesão (RF-23): dias seguidos com a ação do dia feita. Só aparece quando há algo a contar. */
+function StreakLine({ astro, day }: { astro: Astronaut; day: number }) {
+  const diary = useStore((s) => s.diary)
+  const st = adherenceStreak(diary, astro.id, day)
+  if (st.current === 0 && st.best === 0) return null
+  return (
+    <p className="streak small mono" aria-label={`Action streak: ${st.current} days in a row, best ${st.best}`}>
+      <span className="label">Streak</span> {st.current} {st.current === 1 ? 'day' : 'days'} in a row{st.doneToday ? '' : st.current ? ' · do today’s action to extend it' : ''} · best {st.best}
+    </p>
+  )
+}
+
 function Home({ astro, sim }: { astro: Astronaut; sim: Sim }) {
   const status = astronautStatus(astro, sim)
   const pa = priorityAction(astro, sim)
@@ -116,6 +131,7 @@ function Home({ astro, sim }: { astro: Astronaut; sim: Sim }) {
           <NoAction />
         )}
         <DueList astro={astro} sim={sim} />
+        <StreakLine astro={astro} day={sim.day} />
       </section>
     </>
   )
@@ -176,6 +192,29 @@ function FeedCard() {
   )
 }
 
+/** Camada molecular (RF-26): estudos públicos do OSDR/GeneLab sobre o sistema. Contexto; nunca entra no status. */
+function StudiesCard({ system }: { system: SystemId }) {
+  const feed = useStudies(system)
+  if (!feed.studies.length) return null
+  return (
+    <div className="feed">
+      <div className="mr-top">
+        <span className="label">Space biology · OSDR</span>
+        <span className={`prov${feed.live ? ' live' : ''}`}>{feed.live ? 'LIVE' : 'SAMPLE'}</span>
+      </div>
+      <p className="small muted">Public NASA GeneLab studies on this system. Most use animals or cells, so they explain the mechanism and do not set any status.</p>
+      <ul className="studies small">
+        {feed.studies.map((st) => (
+          <li key={st.id}>
+            <a href={studyUrl(st.id)} target="_blank" rel="noreferrer">{st.title}</a>
+            <span className="muted mono">{st.id} · {st.kind}{st.organism ? ` · ${st.organism}` : ''}{st.year ? ` · ${st.year}` : ''}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 // ---------- Nível 2: o sistema ----------
 
 /** Medidor do nível 2: o valor com a tendência ao lado, o motivo do status e o limite que o julga, sem precisar abrir nada. */
@@ -206,6 +245,8 @@ function System({ astro, system, sim }: { astro: Astronaut; system: SystemId; si
   const metrics = systemMetrics(astro, system, sim)
   const actions = systemActions(astro, system, sim)
   const height = system === 'skeletal' ? estimatedHeight(astro, sim.day) : null
+  const ex = useExplanation(astro, system, sim)
+  const reasons = new Map(ex.actions.map((a) => [a.id, a.reason]))
   return (
     <>
       <Crumbs items={[{ label: astro.name, href: paths.body(astro.id) }]} />
@@ -216,7 +257,7 @@ function System({ astro, system, sim }: { astro: Astronaut; system: SystemId; si
         </div>
         <StatusPill status={status} />
       </header>
-      <p className="lede-sm">{def.summary[sim.solar && system === 'radiation' ? 'critical' : status]}</p>
+      <p className="lede-sm">{ex.summary}</p>
       <p className="hazards">
         <span className="label">NASA HRP hazards</span>
         {def.hazards.map((h) => <span key={h} className="chip">{HAZARD_LABEL[h]}</span>)}
@@ -229,15 +270,15 @@ function System({ astro, system, sim }: { astro: Astronaut; system: SystemId; si
         <section>
           <h2 className="label">Do this</h2>
           <div className="stack">
-            {actions.map((a) => <ActionCard key={a.id} astroId={astro.id} action={a} status={status} />)}
+            {actions.map((a) => <ActionCard key={a.id} astroId={astro.id} action={a} status={status} why={reasons.get(a.id)} />)}
           </div>
         </section>
       )}
       {actions.length === 0 && <NoAction />}
       <details className="why">
-        <summary>How it works <OfflineTag /></summary>
+        <summary>How it works {ex.source === 'ai' ? <AiTag /> : <OfflineTag />}</summary>
         <div className="why-body">
-          <p className="small">{def.mechanism}</p>
+          <p className="small">{ex.mechanism}</p>
           <h3 className="label">Evidence</h3>
           <p className="small">{def.evidence}</p>
           {height && (
@@ -249,6 +290,7 @@ function System({ astro, system, sim }: { astro: Astronaut; system: SystemId; si
             </div>
           )}
           {system === 'radiation' && <FeedCard />}
+          <StudiesCard system={system} />
         </div>
       </details>
     </>
@@ -313,6 +355,7 @@ function Metric({ astro, system, metric, sim }: { astro: Astronaut; system: Syst
 
       <div className="btn-row wrap">
         {isLoggable(METRICS[metric]) && <a className="btn" href={paths.log(astro.id, system, metric)}>Log a measurement</a>}
+        {metric === 'rhr' && <a className="btn" href={paths.log(astro.id, system, metric)}>Check with camera</a>}
         <button type="button" className={`btn${flagged ? ' on' : ''}`} aria-pressed={flagged} onClick={() => toggleFlag(flagKey(astro.id, metric))}>
           {flagged ? 'Flagged for flight surgeon' : 'Flag for flight surgeon'}
         </button>
@@ -332,7 +375,7 @@ export function Panel({ route }: { route: BodyRoute }) {
       <div key={`${astro.id}-${route.level}-${key}`} className="panel-in">
         {route.level === 1 && route.view === 'home' && <Home astro={astro} sim={sim} />}
         {route.level === 1 && route.view === 'queue' && <QueuePanel astro={astro} sim={sim} />}
-        {route.level === 1 && route.view === 'diary' && <DiaryPanel astro={astro} />}
+        {route.level === 1 && route.view === 'diary' && <DiaryPanel astro={astro} sim={sim} />}
         {route.level === 1 && route.view === 'packet' && <PacketPanel astro={astro} sim={sim} />}
         {route.level === 2 && <System astro={astro} system={route.system} sim={sim} />}
         {route.level === 3 && !route.log && <Metric astro={astro} system={route.system} metric={route.metric} sim={sim} />}

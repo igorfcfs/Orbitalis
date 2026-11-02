@@ -5,6 +5,7 @@ import { useStore } from './state/store'
 import { CrewOverlay, Credits, Dock, Hud, HoverTip, LayersRail, MenuSheet, SystemsRail } from './ui/Hud'
 import { Panel } from './ui/Panel'
 import { SourcesScreen } from './ui/SourcesScreen'
+import { Timeline } from './ui/Timeline'
 
 export default function App() {
   const route = useRoute()
@@ -47,6 +48,7 @@ export default function App() {
         <Hud />
         {route.level === 0 && !route.page && <CrewOverlay />}
         {route.level === 0 && route.page === 'sources' && <SourcesScreen />}
+        {route.level === 0 && route.page === 'timeline' && <Timeline />}
         {route.level !== 0 && (
           <>
             {/* O índice dos sistemas vem antes do painel: é o que se lê (e o Tab alcança) primeiro */}

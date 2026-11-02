@@ -296,6 +296,7 @@ export function MenuSheet({ route }: { route: Route }) {
         )}
         <section>
           <h3 className="label">Mission</h3>
+          <a className="sheet-item" href={paths.timeline} onClick={close}><span>Crew timeline</span></a>
           <a className="sheet-item" href={paths.sources} onClick={close}><span>Sources, data and features</span></a>
           <button type="button" className="sheet-item" onClick={() => { close(); setCredits(true) }}><span>Credits</span></button>
         </section>

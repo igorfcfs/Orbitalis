@@ -6,7 +6,7 @@ import type { SystemId } from '../types'
 export type BodyView = 'home' | 'queue' | 'diary' | 'packet'
 
 export type Route =
-  | { level: 0; page?: 'sources' }
+  | { level: 0; page?: 'sources' | 'timeline' }
   | { level: 1; id: string; view: BodyView }
   | { level: 2; id: string; system: SystemId }
   | { level: 3; id: string; system: SystemId; metric: string; log: boolean }
@@ -16,6 +16,7 @@ const VIEWS: BodyView[] = ['queue', 'diary', 'packet']
 export function parseHash(hash: string): Route {
   const [, root, id, system, metric, extra] = hash.replace(/^#/, '').split('/')
   if (root === 'sources') return { level: 0, page: 'sources' }
+  if (root === 'timeline') return { level: 0, page: 'timeline' }
   if (root !== 'body' || !ASTRONAUTS.some((a) => a.id === id)) return { level: 0 }
   if (VIEWS.includes(system as BodyView)) return { level: 1, id, view: system as BodyView }
   if (!system || !(system in SYSTEMS)) return { level: 1, id, view: 'home' }
@@ -31,6 +32,7 @@ export function go(path: string) {
 export const paths = {
   crew: '#/crew',
   sources: '#/sources',
+  timeline: '#/timeline',
   body: (id: string) => `#/body/${id}`,
   view: (id: string, v: BodyView) => `#/body/${id}/${v}`,
   system: (id: string, s: string) => `#/body/${id}/${s}`,

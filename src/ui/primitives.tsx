@@ -57,6 +57,10 @@ export function Reading({ m }: { m: ResolvedMetric }) {
   )
 }
 
+export function AiTag() {
+  return <span className="offline ai" title="Written by an AI model from numbers the code computed, then checked by rules. Status never comes from AI.">AI explanation</span>
+}
+
 export function OfflineTag() {
   return <span className="offline" title="Fallback text from the closed catalog; no model call was made">Offline explanation</span>
 }

@@ -1,28 +1,28 @@
 # ORBITALIS — Status dos requisitos
 
-31 de outubro de 2026 · para a equipe AstroCoders · o evento é em 14–15/11 (faltam 14 dias; os resources oficiais saem em 13/11)
+2 de novembro de 2026 · para a equipe AstroCoders · o evento é em 14–15/11 (faltam 12 dias; os resources oficiais saem em 13/11)
 
-Estado do código em 31/10/2026 (`c600f8f` + 32 arquivos modificados ou novos, ainda sem commit), já com a rodada de UI/UX dos dados. Os requisitos vêm da especificação (`ORBITALIS — Especificação Final.md`, RF-01 a RF-27) e dos novos que você está avaliando (RF-28 a RF-32), mais o RF-33, que sugiro. O catálogo de emergência do RF-33 está em `ORBITALIS — Catálogo de Emergência (rascunho).md`.
+Estado do código em 02/11/2026 (`38f66ff` + 21 arquivos modificados ou novos, ainda sem commit), já com a rodada de UI/UX dos dados e a entrega de RF-18, RF-23 a RF-27. Os requisitos vêm da especificação (`ORBITALIS — Especificação Final.md`, RF-01 a RF-27) e dos novos que você está avaliando (RF-28 a RF-32), mais o RF-33, que sugiro. O catálogo de emergência do RF-33 está em `ORBITALIS — Catálogo de Emergência (rascunho).md`.
 
-Conferi em 31/10, por captura de tela ou execução: o nível 1 e a lista de sistemas, o feed DONKI (HTTP 200, 15 flares), o typecheck e os 112 testes (8 arquivos, 27 deles do motor de status). Em 30/10 conferi as telas dos níveis 1 a 3, o teclado, o pacote, o formulário de registro e o evento solar. O restante vem da leitura do código e dos testes. A viabilidade e os riscos segundo as diretrizes da NASA estão em `ORBITALIS — Viabilidade e Riscos.md`.
+Conferi em 02/11: o typecheck limpo, o build e os 134 testes (9 arquivos; 22 novos cobrem RF-18 e RF-23 a RF-27), as rotas `/api/osdr` (dados reais do OSDR, 400 para sistema desconhecido) e `/api/explain` (503 sem chave, 405 em GET) com o servidor de pé, e uma captura da tela Crew timeline. **Não conferi:** uma chamada real ao modelo de IA (só `fetch` simulado nos testes), a câmera num aparelho real (o cálculo do pulso foi testado só com sinal sintético) nem a captura das telas de sistema e de registro. Conferi em 31/10, por captura de tela ou execução: o nível 1 e a lista de sistemas, o feed DONKI (HTTP 200, 15 flares), o typecheck e os 112 testes (8 arquivos, 27 deles do motor de status). Em 30/10 conferi as telas dos níveis 1 a 3, o teclado, o pacote, o formulário de registro e o evento solar. O restante vem da leitura do código e dos testes. A viabilidade e os riscos segundo as diretrizes da NASA estão em `ORBITALIS — Viabilidade e Riscos.md`.
 
 ## 1. Resumo
 
 | Grupo | Total | Atendidos | Parciais | Não atendidos |
 | --- | --- | --- | --- | --- |
 | Obrigatórios (RF-01 a RF-15) | 15 | 15 | 0 | 0 |
-| Fortes (RF-16 a RF-22) | 7 | 5 | 1 | 1 |
-| Opcionais (RF-23 a RF-27) | 5 | 0 | 0 | 5 |
+| Fortes (RF-16 a RF-22) | 7 | 6 | 1 | 0 |
+| Opcionais (RF-23 a RF-27) | 5 | 5 | 0 | 0 |
 | Propostos (RF-28 a RF-33) | 6 | 0 | 1 | 5 |
 
-Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No escopo original faltam a camada de IA (RF-18), a metade de RF-20 (sem WebGL) e os cinco opcionais.
+Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No escopo original só falta a metade de RF-20 (sem WebGL). RF-18 e os cinco opcionais entraram em 02/11 (ver as ressalvas na seção 2).
 
 **Fora da lista de RFs há três pendências baratas** que a verificação de hoje encontrou, descritas na seção 8:
 1. A atribuição CC BY-SA do Z-Anatomy só aparece no modal Credits e em Sources; o CLAUDE.md pede também no rodapé do canvas.
 2. Não existem `LICENSE` nem `README`, e a spec exige licença documentada.
 3. Não há `ErrorBoundary` nem detecção de WebGL (é a metade que falta em RF-20).
 
-## 2. Atendidos (20)
+## 2. Atendidos (26)
 
 | ID | Requisito | Onde está, e observações |
 | --- | --- | --- |
@@ -43,7 +43,13 @@ Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No es
 | RF-15 | Sinalizar o que vai ao flight surgeon | "Flag for flight surgeon" no nível 3 e "Add to packet" nas ações; os itens CRITICAL entram sozinhos |
 | RF-16 | Diário de decisões | Carimbo ISO, dia, astronauta, sistema, ação, decisão, link e status no momento; marca `autonomous` em blackout; `localStorage` em try/catch |
 | RF-17 | Pacote de handover para o flight surgeon | Prévia em texto, copiar e baixar. "Send" só registra o envio no aparelho (o produto não faz telemetria para a Terra) |
+| RF-18 | Camada explicativa por IA | `lib/explain.ts` (contrato, esquema, limites de 22/45/18 palavras, validação), `server/explain.ts` e a rota `/api/explain` (`vite.config.ts`): ferramenta forçada com esquema JSON, temperatura 0,2, timeout de 8 s, chave só no servidor (`ANTHROPIC_API_KEY`, `.env.example`). A resposta é descartada inteira se tiver ação fora de `allowedActions`, número que não está na entrada ou termo de medicamento ou diagnóstico. Cache por astronauta, sistema, dia e link (`lib/useExplanation.ts`). Na tela do sistema o texto trocado leva a etiqueta "AI explanation"; sem chave ou em falha vale o texto de reserva "Offline explanation". 11 testes. **Ressalvas:** nunca rodou contra o modelo real; a IA só justifica ações que o motor já oferece (`BEH-LOAD` e `NUT-MASS` continuam inalcançáveis); a rota é middleware do Vite (ver R-P09); a submissão precisa declarar o uso de IA |
 | RF-19 | Feed de clima espacial ao vivo | DONKI por `/api/space-weather` (`vite.config.ts`); verificado em 31/10: HTTP 200 com dados reais (15 flares). O cliente cai para `SAMPLE` sem mostrar erro. **Atenção:** a rota é um middleware do Vite (dev e preview); numa hospedagem estática o selo seria sempre `SAMPLE` |
+| RF-23 | Gamificação: sequência de adesão | `adherenceStreak` (`lib/adherence.ts`) conta dias seguidos com a ação feita, a partir do diário; hoje em aberto não quebra a sequência. Aparece em Today (nível 1) e no Decision diary, sem pontos nem ranking. Testado |
+| RF-24 | Entrada por câmera | "Check with camera" no registro da frequência cardíaca: pulso por fotopletismografia de ponta de dedo (`lib/ppg.ts`, `ui/CameraCheck.tsx`), 15 s, nenhum quadro guardado ou enviado. O resultado só preenche o campo, que segue a validação normal. **Ressalva:** testado só com sinal sintético, não numa câmera real (R-P10). A frequência continua com o selo CONTINUOUS na métrica; a caixa da câmera usa LOGGED |
+| RF-25 | Visão temporal da tripulação | Menu → Crew timeline (`#/timeline`, `ui/Timeline.tsx`): uma faixa por astronauta com o status geral a cada 10 dias, em forma e cor, pelo mesmo motor; clicar leva o dia da simulação até ali. Testado |
+| RF-26 | Camada molecular do OSDR | Cartão "Space biology · OSDR" em "How it works" de cada sistema: até 3 estudos públicos do GeneLab (rota `/api/osdr`, termos fixos por sistema, estudos de voo primeiro), selo LIVE ou SAMPLE. Verificado ao vivo em 02/11. É contexto: não entra no status. A maioria dos estudos é com animais ou células, e a tela diz isso |
+| RF-27 | Registro de desfecho da ação | `decisionOutcome`: no Decision diary cada ação feita mostra o status do sistema na decisão e hoje (melhorou, sem mudança, piorou, ou "Check tomorrow"), lido do motor, sem afirmar causa. Testado |
 | RF-21 | Regra do oficial médico como paciente | `CMO-CONSULT` vira "Consult the backup CMO", com nota na tela (`systemActions`); testado |
 | RF-22 | Controles de cenário: dia, link, evento solar | Menu → Simulation (dia de 10 a 250, evento solar, link) e parâmetros de URL (`?day=`, `?solar=1`, `?link=blackout`) |
 
@@ -53,16 +59,9 @@ Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No es
 | --- | --- | --- | --- |
 | RF-20 | Degradação graciosa: nunca erro na tela | DONKI cai para `SAMPLE` e `useFeed` nunca lança erro; `localStorage` sempre em try/catch; a cabeça do atlas serve de reserva se o GLB do rosto falhar | Não há `ErrorBoundary` nem detecção de WebGL no código. A spec pede uma silhueta SVG com os pontos clicáveis; com a lista de sistemas já em HTML, basta isolar o `<Canvas>` num `ErrorBoundary` e mostrar só a lista e o painel |
 
-## 4. Não atendidos (6)
+## 4. Não atendidos (0)
 
-| ID | Requisito | Observações |
-| --- | --- | --- |
-| RF-18 | Camada explicativa por IA | Só existe o plano B que o requisito exige: textos fixos marcados "Offline explanation". Faltam rota de servidor, saída JSON com schema, validação (ação fora da lista, número fora da entrada), cache e timeout de 8 s |
-| RF-23 | Gamificação: sequência de adesão | O `diary` já tem o que é preciso para contar dias seguidos com a ação do dia feita |
-| RF-24 | Entrada por câmera | Risco alto na spec; entra na ordem de corte |
-| RF-25 | Visão temporal da tripulação | A Crew é um instantâneo do dia escolhido no Menu; falta mostrar a evolução |
-| RF-26 | Camada molecular do OSDR | Primeiro da ordem de corte da spec |
-| RF-27 | Registro de desfecho da ação | O diário guarda a decisão e o status naquele momento, não o desfecho |
+Nenhum. Os seis que estavam aqui (RF-18, RF-23 a RF-27) passaram para a seção 2 em 02/11.
 
 ## 5. Propostos (RF-28 a RF-33)
 
@@ -176,7 +175,7 @@ Hoje a tripulação é fixa em `data/astronauts.ts` (4 astronautas; os `override
 | Todo medidor do nível 2 mostra limite, motivo do status e tendência | Atendido | |
 | Todo número tem unidade, baseline e selo | **Parcial** | Exceção: "Career dose at Day 250" no cartão de exposição (RF-08) |
 | Limites oficiais com o ID NASA; os demais "Provisional threshold" | Atendido | As faixas clínicas dizem "Terrestrial clinical range" |
-| Com o LLM fora do ar, o app continua completo com textos de reserva | Atendido | Por construção: ainda não há LLM; só será testável com RF-18 |
+| Com o LLM fora do ar, o app continua completo com textos de reserva | Atendido | Testado com `fetch` simulado (`rf18to27.test.ts`): sem chave, erro de rede ou resposta reprovada, devolve null e o cliente mostra o texto de reserva. Falta repetir com a chave real |
 | A chave de API não aparece em nenhum arquivo do cliente | Atendido | Não há chave nem `import.meta.env` no cliente |
 | DONKI mostra `LIVE` ou `SAMPLE`, nunca erro na tela | Atendido | |
 | Teclado: Tab, setas, Enter e Esc navegam por todos os níveis | **Parcial** | Tab, Enter e Esc verificados do nível 1 ao 2 e de volta; nenhuma seta está implementada |

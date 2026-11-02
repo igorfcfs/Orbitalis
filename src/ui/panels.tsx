@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { ACTIONS } from '../data/actions'
+import { OUTCOME_LABEL, adherenceStreak, decisionOutcome } from '../lib/adherence'
 import { METRICS, SYSTEMS } from '../data/systems'
 import {
-  LINK_DELAY_MIN, MISSION_LENGTH, dueItems, fmt, isLoggable, packetItems, packetText, resolveMetric,
+  LINK_DELAY_MIN, MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, dueItems, fmt, isLoggable, packetItems, packetText, resolveMetric,
   signed, shortUnit, systemActions,
 } from '../lib/model'
 import { paths } from '../lib/route'
 import { useStore } from '../state/store'
 import type { Astronaut, Measurement, Sim } from '../types'
+import { CameraCheck } from './CameraCheck'
 import { ActionCard, Crumbs, MetricBadge, NoAction, OfflineTag, StatusPill, ThresholdChip } from './primitives'
 
 // ---------- Fila do dia (RF-04) ----------
@@ -144,6 +146,7 @@ export function LogPanel({ astro, system, metric, sim }: { astro: Astronaut; sys
           <p className="small">{lead.why}</p>
         </div>
       </div>
+      {metric === 'rhr' && <CameraCheck onReading={(bpm) => setValues((v) => ({ ...v, rhr: String(bpm) }))} />}
       <form onSubmit={submit} className="form" noValidate>
         {members.map((d) => (
           <label key={d.id} className="field">
@@ -173,7 +176,9 @@ export function LogPanel({ astro, system, metric, sim }: { astro: Astronaut; sys
 
 // ---------- Diário de decisões (RF-16) ----------
 
-export function DiaryPanel({ astro }: { astro: Astronaut }) {
+export function DiaryPanel({ astro, sim }: { astro: Astronaut; sim: Sim }) {
+  const all = useStore((s) => s.diary)
+  const streak = adherenceStreak(all, astro.id, sim.day)
   const diary = useStore((s) => s.diary).filter((d) => d.astronautId === astro.id).slice().reverse()
   const done = diary.filter((d) => d.decision === 'done').length
   const snoozed = diary.length - done
@@ -188,11 +193,14 @@ export function DiaryPanel({ astro }: { astro: Astronaut }) {
         <div className="statcell"><span className="label">Snoozed</span><span className="mono val">{snoozed}</span></div>
         <div className="statcell"><span className="label">Autonomous</span><span className="mono val">{auto}</span></div>
       </div>
+      <p className="small muted mono">Streak: {streak.current} {streak.current === 1 ? 'day' : 'days'} in a row with the day’s action done · best {streak.best}</p>
       {diary.length === 0 ? (
         <NoAction text="No decisions logged yet. Mark an action done from any screen and it appears here." />
       ) : (
         <ul className="diary">
-          {diary.map((d) => (
+          {diary.map((d) => {
+            const o = decisionOutcome(d, astro, sim)
+            return (
             <li key={d.id}>
               <div className="mr-top">
                 <span className="mr-label">{ACTIONS[d.actionId].label}</span>
@@ -201,9 +209,15 @@ export function DiaryPanel({ astro }: { astro: Astronaut }) {
               <p className="small muted mono">
                 Day {d.missionDay} · {d.decision} · {SYSTEMS[d.systemId].name} · link {d.linkState}{d.autonomous ? ' · autonomous' : ''}
               </p>
+              {o.kind !== 'none' && (
+                <p className="small outcome">
+                  <span className="label">Outcome</span> {SYSTEMS[d.systemId].name}: {STATUS_GLYPH[o.from]} {STATUS_LABEL[o.from]} then, {STATUS_GLYPH[o.to]} {STATUS_LABEL[o.to]} now · {OUTCOME_LABEL[o.kind]}
+                </p>
+              )}
               <p className="small muted mono">{d.ts}</p>
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
     </>
