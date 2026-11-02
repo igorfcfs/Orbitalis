@@ -46,7 +46,7 @@ const COVERAGE: { id: string; text: string; where: string }[] = [
   { id: 'RF-17', text: 'Handover packet for the flight surgeon', where: 'Menu → Flight surgeon packet' },
   { id: 'RF-18', text: 'AI explanation layer with a rule-checked fallback', where: 'System → How it works (AI explanation or Offline explanation)' },
   { id: 'RF-19', text: 'Live space weather feed (NASA DONKI), with a stored sample as fallback', where: 'Radiation → How it works, LIVE or SAMPLE seal' },
-  { id: 'RF-20', text: 'Graceful degradation: no error on screen when a feed, storage or the face model fails', where: 'Partial: no fallback yet when WebGL is unavailable' },
+  { id: 'RF-20', text: 'Graceful degradation: no error on screen when a feed, storage or the face model fails', where: 'Without WebGL or after a 3D error, lists and panels keep working' },
   { id: 'RF-21', text: 'Crew Medical Officer as patient: the consult goes to the backup CMO', where: 'Aiko Sato, any critical system' },
   { id: 'RF-22', text: 'Scenario controls: mission day, solar event, Earth link', where: 'Menu → Simulation' },
   { id: 'RF-23', text: 'Streak of days with the day’s action done', where: 'Body → Today, and Decision diary' },

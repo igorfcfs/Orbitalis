@@ -4,25 +4,25 @@
 
 Estado do código em 02/11/2026 (`38f66ff` + 21 arquivos modificados ou novos, ainda sem commit), já com a rodada de UI/UX dos dados e a entrega de RF-18, RF-23 a RF-27. Os requisitos vêm da especificação (`ORBITALIS — Especificação Final.md`, RF-01 a RF-27) e dos novos que você está avaliando (RF-28 a RF-32), mais o RF-33, que sugiro. O catálogo de emergência do RF-33 está em `ORBITALIS — Catálogo de Emergência (rascunho).md`.
 
-Conferi em 02/11: o typecheck limpo, o build e os 134 testes (9 arquivos; 22 novos cobrem RF-18 e RF-23 a RF-27), as rotas `/api/osdr` (dados reais do OSDR, 400 para sistema desconhecido) e `/api/explain` (503 sem chave, 405 em GET) com o servidor de pé, e uma captura da tela Crew timeline. **Não conferi:** uma chamada real ao modelo de IA (só `fetch` simulado nos testes), a câmera num aparelho real (o cálculo do pulso foi testado só com sinal sintético) nem a captura das telas de sistema e de registro. Conferi em 31/10, por captura de tela ou execução: o nível 1 e a lista de sistemas, o feed DONKI (HTTP 200, 15 flares), o typecheck e os 112 testes (8 arquivos, 27 deles do motor de status). Em 30/10 conferi as telas dos níveis 1 a 3, o teclado, o pacote, o formulário de registro e o evento solar. O restante vem da leitura do código e dos testes. A viabilidade e os riscos segundo as diretrizes da NASA estão em `ORBITALIS — Viabilidade e Riscos.md`.
+Conferi em 02/11: o typecheck limpo, o build e os 139 testes (10 arquivos; 27 novos cobrem RF-18, RF-20 e RF-23 a RF-27), as rotas `/api/osdr` (dados reais do OSDR, 400 para sistema desconhecido) e `/api/explain` (503 sem chave, 405 em GET) com o servidor de pé, e uma captura da tela Crew timeline. **Não conferi:** uma chamada real ao modelo de IA (só `fetch` simulado nos testes), a câmera num aparelho real (o cálculo do pulso foi testado só com sinal sintético) nem a captura das telas de sistema e de registro. Conferi em 31/10, por captura de tela ou execução: o nível 1 e a lista de sistemas, o feed DONKI (HTTP 200, 15 flares), o typecheck e os 112 testes (8 arquivos, 27 deles do motor de status). Em 30/10 conferi as telas dos níveis 1 a 3, o teclado, o pacote, o formulário de registro e o evento solar. O restante vem da leitura do código e dos testes. A viabilidade e os riscos segundo as diretrizes da NASA estão em `ORBITALIS — Viabilidade e Riscos.md`.
 
 ## 1. Resumo
 
 | Grupo | Total | Atendidos | Parciais | Não atendidos |
 | --- | --- | --- | --- | --- |
 | Obrigatórios (RF-01 a RF-15) | 15 | 15 | 0 | 0 |
-| Fortes (RF-16 a RF-22) | 7 | 6 | 1 | 0 |
+| Fortes (RF-16 a RF-22) | 7 | 7 | 0 | 0 |
 | Opcionais (RF-23 a RF-27) | 5 | 5 | 0 | 0 |
 | Propostos (RF-28 a RF-33) | 6 | 0 | 1 | 5 |
 
-Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No escopo original só falta a metade de RF-20 (sem WebGL). RF-18 e os cinco opcionais entraram em 02/11 (ver as ressalvas na seção 2).
+Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No escopo original não falta nada: RF-18, os cinco opcionais e a metade de RF-20 que faltava (sem WebGL) entraram em 02/11 (ver as ressalvas na seção 2).
 
 **Fora da lista de RFs há três pendências baratas** que a verificação de hoje encontrou, descritas na seção 8:
 1. A atribuição CC BY-SA do Z-Anatomy só aparece no modal Credits e em Sources; o CLAUDE.md pede também no rodapé do canvas.
 2. Não existem `LICENSE` nem `README`, e a spec exige licença documentada.
 3. Não há `ErrorBoundary` nem detecção de WebGL (é a metade que falta em RF-20).
 
-## 2. Atendidos (26)
+## 2. Atendidos (27)
 
 | ID | Requisito | Onde está, e observações |
 | --- | --- | --- |
@@ -50,14 +50,13 @@ Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No es
 | RF-25 | Visão temporal da tripulação | Menu → Crew timeline (`#/timeline`, `ui/Timeline.tsx`): uma faixa por astronauta com o status geral a cada 10 dias, em forma e cor, pelo mesmo motor; clicar leva o dia da simulação até ali. Testado |
 | RF-26 | Camada molecular do OSDR | Cartão "Space biology · OSDR" em "How it works" de cada sistema: até 3 estudos públicos do GeneLab (rota `/api/osdr`, termos fixos por sistema, estudos de voo primeiro), selo LIVE ou SAMPLE. Verificado ao vivo em 02/11. É contexto: não entra no status. A maioria dos estudos é com animais ou células, e a tela diz isso |
 | RF-27 | Registro de desfecho da ação | `decisionOutcome`: no Decision diary cada ação feita mostra o status do sistema na decisão e hoje (melhorou, sem mudança, piorou, ou "Check tomorrow"), lido do motor, sem afirmar causa. Testado |
+| RF-20 | Degradação graciosa: nunca erro na tela | Quatro falhas tratadas, cada uma sem erro na tela. **1. Feed DONKI fora do ar:** `useFeed` nunca lança erro e cai para a amostra com o selo `SAMPLE` (o OSDR faz o mesmo, `useStudies`; a IA cai para o texto "Offline explanation"). **2. `localStorage` indisponível:** toda leitura e escrita está em `try/catch` (`state/store.ts`) e o app segue em memória. **3. Rosto 3D (GLB) não carrega:** a cabeça do atlas serve de reserva (`variant.head`). **4. WebGL indisponível, erro na cena ou contexto perdido (novo em 02/11):** `scene/webgl.ts` testa o contexto antes de montar a cena; `SceneBoundary` (`scene/SafeStage.tsx`) isola o `<Canvas>`; o evento `webglcontextlost` também aciona a reserva. Nesses casos o app mostra um aviso discreto ("3D view unavailable on this device"), a tripulação vira uma lista de placas com forma e palavra do status, e a lista de sistemas, o painel e o menu seguem completos; o dock (traje e raio-X) some, porque só serve à cena. Optei pela reserva só com listas e painéis, não pela silhueta SVG com pontos clicáveis que a spec cita, porque a lista dos 8 sistemas já é o índice dos mesmos dados. 5 testes (`scene/webgl.test.ts`) e captura em Chrome sem WebGL (Crew e Body). Ressalva: um erro lançado fora da renderização (por exemplo num manipulador de evento) não passa pelo `ErrorBoundary` |
 | RF-21 | Regra do oficial médico como paciente | `CMO-CONSULT` vira "Consult the backup CMO", com nota na tela (`systemActions`); testado |
 | RF-22 | Controles de cenário: dia, link, evento solar | Menu → Simulation (dia de 10 a 250, evento solar, link) e parâmetros de URL (`?day=`, `?solar=1`, `?link=blackout`) |
 
-## 3. Parcialmente atendido (1)
+## 3. Parcialmente atendido (0)
 
-| ID | Requisito | O que existe | O que falta |
-| --- | --- | --- | --- |
-| RF-20 | Degradação graciosa: nunca erro na tela | DONKI cai para `SAMPLE` e `useFeed` nunca lança erro; `localStorage` sempre em try/catch; a cabeça do atlas serve de reserva se o GLB do rosto falhar | Não há `ErrorBoundary` nem detecção de WebGL no código. A spec pede uma silhueta SVG com os pontos clicáveis; com a lista de sistemas já em HTML, basta isolar o `<Canvas>` num `ErrorBoundary` e mostrar só a lista e o painel |
+Nenhum. O RF-20, único que estava aqui, passou para a seção 2 em 02/11.
 
 ## 4. Não atendidos (0)
 

@@ -20,11 +20,11 @@ Desde 31/10: RF-18 e RF-23 a RF-27 saíram de "não atendido" para atendido (com
 | Item | Situação |
 | --- | --- |
 | Obrigatórios (RF-01 a RF-15) | 15 de 15 atendidos |
-| Fortes (RF-16 a RF-22) | 6 atendidos, 1 parcial (RF-20) |
+| Fortes (RF-16 a RF-22) | 7 de 7 atendidos |
 | Opcionais (RF-23 a RF-27) | 5 de 5 |
 | Propostos (RF-28 a RF-33) | 0 de 6 (RF-32 parcial) |
 | Critérios de aceite (CLAUDE.md §15) | 11 atendidos, 3 parciais (atribuição no canvas, número sem selo, setas do teclado), 1 pendente (teste dos 10 segundos) |
-| Qualidade | Typecheck limpo; build ok; 134 de 134 testes em 9 arquivos (sem a chamada real ao modelo de IA nem a câmera real); feed do DONKI ao vivo (HTTP 200, 15 flares) |
+| Qualidade | Typecheck limpo; build ok; 139 de 139 testes em 10 arquivos (sem a chamada real ao modelo de IA nem a câmera real); feed do DONKI ao vivo (HTTP 200, 15 flares) |
 | Interface (captura de 31/10) | Nível 1 sem rolagem (702/702) e 8 sistemas na lista |
 | Regressões | Nenhuma. Outra sessão alterou `bodyShader.ts` (4 linhas) e `AstronautRig.tsx`: typecheck, testes e a captura do corpo seguem bem |
 
@@ -38,7 +38,6 @@ Desde 31/10: RF-18 e RF-23 a RF-27 saíram de "não atendido" para atendido (com
 | `LICENSE` e `README` (como rodar, fontes e licenças, aviso de não afiliação à NASA) | S | decidir MIT ou Apache 2.0 | R-N03, R-N05, R-N13 |
 | Texto da descrição do uso de SI | S | | R-N04 |
 | Rodapé de atribuição CC BY-SA no canvas | S | | R-P01 |
-| `ErrorBoundary` em volta do `<Stage>` (fecha o RF-20) | S | | R-P02 |
 | Declarações na interface: dose como aproximação, redação de [V1 4020], dados sintéticos | S | | R-N08, R-N09, R-N11 |
 | RF-32: corrigir `vo2`, `strength` e `acuity` e mostrar o aparelho nos pendentes e nos medidores | S | | |
 | Hospedar as fontes tipográficas em vez do Google Fonts | S | | R-P05, R-N05 |
@@ -88,7 +87,7 @@ Os riscos marcados "condicional" só existem se o requisito proposto corresponde
 | ID | Severidade | Origem | O que pode dar problema | Evidência | Mitigação | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
 | R-P01 | Média | CLAUDE.md §10 e licença CC BY-SA do Z-Anatomy | O CLAUDE.md exige a atribuição no rodapé do canvas e no modal; hoje só existe no modal Credits e em Sources | `gather-evidence.mjs`: `checks.attributionOnCanvas` vazio | Rodapé discreto no canvas | Aberto |
-| R-P02 | Média | RF-20 e CLAUDE.md §15 | Sem `ErrorBoundary` nem detecção de WebGL, uma falha do contexto pode deixar a tela em branco para quem avalia em hardware fraco | `checks.errorBoundary` e `checks.webglDetection` vazios | `ErrorBoundary` em volta do `<Stage>` que preserve a lista de sistemas e o painel | Aberto |
+| R-P02 | Média | RF-20 e CLAUDE.md §15 | Sem `ErrorBoundary` nem detecção de WebGL, uma falha do contexto pode deixar a tela em branco para quem avalia em hardware fraco | `checks.errorBoundary` e `checks.webglDetection` vazios | `ErrorBoundary` em volta do `<Stage>` que preserve a lista de sistemas e o painel | Mitigado em 02/11 (`SafeStage`, `webgl.ts`, 5 testes e captura sem WebGL) |
 | R-P03 | Média | Desempenho | 27 a 45 fps medidos numa GPU integrada (meta de 60, medição de 29 e 30/10, não repetida depois da UI de hoje) e 39,2 MB em `public/` (o maior: `studio_2k.hdr`, 6,3 MB; `muscles.glb`, 5,9 MB) | `repo.publicMB`, `repo.largestPublic` | Remedir; manter as camadas sob demanda; avaliar um modo de qualidade reduzida | Aberto |
 | R-P04 | Média | Feed ao vivo | A rota `/api/space-weather` é um middleware do Vite (dev e preview); numa hospedagem estática o selo seria sempre `SAMPLE` | `vite.config.ts`; hoje o feed responde (HTTP 200, 15 flares) | Função de servidor equivalente se o app for hospedado, ou declarar a limitação | Aberto |
 | R-P05 | Baixa | Regra 10 e modo autônomo | As fontes tipográficas vêm do Google Fonts; sem rede, o app cai para a fonte do sistema, e cada acesso chama um terceiro | `index.html` linhas 8 a 10 | Hospedar Space Grotesk e JetBrains Mono (OFL) em `public/` | Aberto |
@@ -111,5 +110,5 @@ Os riscos marcados "condicional" só existem se o requisito proposto corresponde
 
 | Data | HEAD | Modo | Técnica | Conformidade | Obrigatórios | Testes | Riscos abertos (A/M/B) | Nota |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 02/11/2026 | `38f66ff` (+21) | rápido | Viável com cortes (provisório) | Em risco | 15 de 15 | 134 de 134 | 3 / 13 / 9 | RF-18 e RF-23 a RF-27 entregues. Fontes da NASA não reverificadas (só `vite.config.ts` mudou na área sensível, e o OSDR responde ao vivo) |
+| 02/11/2026 | `38f66ff` (+21) | rápido | Viável com cortes (provisório) | Em risco | 15 de 15 | 139 de 139 | 3 / 12 / 9 | RF-18 e RF-23 a RF-27 entregues. Fontes da NASA não reverificadas (só `vite.config.ts` mudou na área sensível, e o OSDR responde ao vivo) |
 | 31/10/2026 | `c600f8f` (+32) | completo | Viável com cortes (provisório) | Em risco | 15 de 15 | 112 de 112 | 3 / 12 / 9 | Primeira avaliação. Fontes da NASA verificadas em texto integral |

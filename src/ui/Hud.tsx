@@ -55,6 +55,7 @@ const joinNames = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0
 export function CrewOverlay() {
   const sim = useSim()
   const hoverCrew = useStore((s) => s.hoverCrew)
+  const sceneFailed = useStore((s) => s.sceneFailed)
   const list = ASTRONAUTS.map((a) => ({ a, status: astronautStatus(a, sim), off: attentionSystems(a, sim) }))
   const critical = list.filter((x) => x.status === 'critical')
   const watch = list.filter((x) => x.status === 'watch')
@@ -82,7 +83,23 @@ export function CrewOverlay() {
         <h1>{title}</h1>
         <p className="sub">{sub}</p>
       </section>
-      {list.map(({ a, status, off }) => (
+      {sceneFailed && (
+        <nav className="crew-list" aria-label="Crew">
+          {list.map(({ a, status, off }) => (
+            <a key={a.id} href={paths.body(a.id)} className={`plate static s-${status}`}>
+              <span className="plate-head"><span className="plate-name">{a.name}</span><StatusPill status={status} /></span>
+              <span className="plate-sys">
+                {off.length === 0 && <span className="muted">All systems nominal</span>}
+                {off.slice(0, 2).map((x) => (
+                  <span key={x.system}><i className={`s-${x.status}`} aria-hidden="true">{STATUS_GLYPH[x.status]}</i>{SYSTEMS[x.system].name}</span>
+                ))}
+                {off.length > 2 && <span className="muted">+{off.length - 2}</span>}
+              </span>
+            </a>
+          ))}
+        </nav>
+      )}
+      {!sceneFailed && list.map(({ a, status, off }) => (
         <div key={a.id} data-plate={a.id} className={`plate s-${status}${hoverCrew === a.id ? ' hot' : ''}`} style={{ opacity: 0 }}>
           <span className="plate-head">
             <span className="plate-name"><span className="full">{a.name}</span><span className="short">{firstName(a)}</span></span>
@@ -97,14 +114,14 @@ export function CrewOverlay() {
           </span>
         </div>
       ))}
-      <nav className="a11y-rail" aria-label="Crew">
+      {!sceneFailed && <nav className="a11y-rail" aria-label="Crew">
         {list.map(({ a, status, off }) => (
           <a key={a.id} href={paths.body(a.id)}>
             {a.name}, {STATUS_LABEL[status].toLowerCase()}
             {off.length > 0 && `: ${off.map((x) => `${SYSTEMS[x.system].name} ${STATUS_LABEL[x.status].toLowerCase()}`).join(', ')}`}
           </a>
         ))}
-      </nav>
+      </nav>}
     </>
   )
 }

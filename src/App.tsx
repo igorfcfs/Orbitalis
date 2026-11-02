@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { go, paths, parentPath, useRoute } from './lib/route'
-import { Stage } from './scene/Stage'
+import { SafeStage } from './scene/SafeStage'
 import { useStore } from './state/store'
 import { CrewOverlay, Credits, Dock, Hud, HoverTip, LayersRail, MenuSheet, SystemsRail } from './ui/Hud'
 import { Panel } from './ui/Panel'
@@ -11,6 +11,7 @@ export default function App() {
   const route = useRoute()
   const suit = useStore((s) => s.suit)
   const xray = useStore((s) => s.xray)
+  const sceneFailed = useStore((s) => s.sceneFailed)
   const setSuit = useStore((s) => s.setSuit)
   const setXray = useStore((s) => s.setXray)
 
@@ -43,7 +44,7 @@ export default function App() {
 
   return (
     <>
-      <Stage route={route} />
+      <SafeStage route={route} />
       <div className="ui">
         <Hud />
         {route.level === 0 && !route.page && <CrewOverlay />}
@@ -54,8 +55,8 @@ export default function App() {
             {/* O índice dos sistemas vem antes do painel: é o que se lê (e o Tab alcança) primeiro */}
             <SystemsRail route={route} />
             <Panel route={route} />
-            {!suit && xray && <LayersRail />}
-            <Dock route={route} />
+            {!sceneFailed && !suit && xray && <LayersRail />}
+            {!sceneFailed && <Dock route={route} />}
           </>
         )}
         <HoverTip route={route} />

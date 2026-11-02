@@ -514,3 +514,10 @@ tr:last-child td { border-bottom: 0; }
 .strip .cell.now { outline: 2px solid var(--ink); outline-offset: 1px; }
 .trow .axis { display: flex; justify-content: space-between; }
 @media (max-width: 720px) { .strip { grid-template-columns: repeat(13, minmax(0, 1fr)); } .sources { padding: 88px 20px 40px; } }
+
+/* RF-20: sem a cena 3D */
+.scene-note { position: absolute; left: 24px; bottom: 28px; max-width: min(400px, 88vw); padding: 10px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--glass); color: var(--ink-2); font-size: 13px; text-align: left; }
+.crew-list { position: absolute; left: 56px; right: 56px; top: 320px; display: flex; flex-wrap: wrap; gap: 14px; }
+.plate.static { position: static; pointer-events: auto; text-decoration: none; color: inherit; justify-items: start; }
+.plate.static:hover, .plate.static:focus-visible { border-color: var(--ink-2); }
+@media (max-width: 1023px) { .crew-list { left: 16px; right: 16px; top: 250px; } }

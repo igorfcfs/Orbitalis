@@ -54,6 +54,9 @@ interface Store extends Persisted {
   hoverCrew: string | null
   menuOpen: boolean
   creditsOpen: boolean
+  /** A cena 3D não está disponível (sem WebGL, erro ou contexto perdido): a interface segue só com listas e painéis */
+  sceneFailed: boolean
+  setSceneFailed: (v: boolean) => void
   setDay: (d: number) => void
   setSolar: (v: boolean) => void
   setLink: (v: Sim['link']) => void
@@ -110,6 +113,8 @@ export const useStore = create<Store>((set, get) => {
     hoverCrew: null,
     menuOpen: false,
     creditsOpen: false,
+    sceneFailed: false,
+    setSceneFailed: (sceneFailed) => set({ sceneFailed }),
     setDay: (day) => set({ day }),
     setSolar: (solar) => set({ solar }),
     setLink: (link) => set({ link }),
