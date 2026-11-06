@@ -5,6 +5,7 @@ import {
   exposure, flagKey, fmt, getAstronaut, headline, isLoggable, metricStats, priorityAction, resolveMetric, shortUnit, signed, systemActions,
   systemMetrics, systemStatus,
 } from '../lib/model'
+import { deviceLine } from '../lib/device'
 import { paths, type Route } from '../lib/route'
 import { adherenceStreak } from '../lib/adherence'
 import { studyUrl, useStudies } from '../lib/osdr'
@@ -62,9 +63,9 @@ function DueList({ astro, sim }: { astro: Astronaut; sim: Sim }) {
         <li key={q.key}>
           <a
             href={paths.log(astro.id, q.metrics[0].system, q.metrics[0].id)}
-            aria-label={`${q.title} due, last taken Day ${q.lastDay}${q.overdueDays > 0 ? `, ${q.overdueDays} days overdue` : ''}. Log it.`}
+            aria-label={`${q.title} due, with ${q.metrics[0].instrument}, last taken Day ${q.lastDay}${q.overdueDays > 0 ? `, ${q.overdueDays} days overdue` : ''}. Log it.`}
           >
-            <span className="due-name">{q.title} due</span>
+            <span className="due-name">{q.title} due<span className="due-dev"> · {q.metrics[0].instrument}</span></span>
             <span className="due-last mono">last Day {q.lastDay}</span>
             <span className="due-go" aria-hidden="true">Log</span>
           </a>
@@ -230,6 +231,7 @@ function Tile({ astro, system, m }: { astro: Astronaut; system: SystemId; m: Res
         <Sparkline m={m} />
       </div>
       <p className="tile-why">{m.eval.reason}</p>
+      <p className="tile-dev small muted">{deviceLine(m)}</p>
       <div className="tile-foot">
         <span className="mono">pre-flight {fmt(m.baseline, m.decimals)} {shortUnit(m.unit)}</span>
         <MetricBadge m={m} />

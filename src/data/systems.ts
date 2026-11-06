@@ -7,7 +7,10 @@ const INSTR = {
   analyzer: 'Bio-Analyzer (CSA)',
   oct: 'OCT and fundoscope (ISS)',
   slammd: 'SLAMMD',
-  ared: 'ARED / T2 / CEVIS',
+  ared: 'ARED resistive device',
+  cevis: 'Cycle ergometer (CEVIS)',
+  sessions: 'ARED, T2 or CEVIS (per session)',
+  chart: 'Visual acuity chart',
   rad: 'Personal active dosimeter (ESA)',
   cognition: 'Cognition test battery',
   dxa: 'Pre-flight DXA scan + bone-loss model',
@@ -30,7 +33,7 @@ const BASE_METRICS: Record<string, BaseMetric> = {
   vo2: {
     id: 'vo2', system: 'cardiovascular', label: 'Aerobic capacity', unit: '% of pre-flight', decimals: 0, baseline: 100, typical: 90,
     provenance: 'PERIODIC', threshold: { kind: 'nasa', id: 'V1 4003', text: 'NASA-STD-3001 [V1 4003] ≥ 80%', limit: 80 },
-    instrument: INSTR.ared, how: 'Graded exercise test on the cycle ergometer, with the wearable on.',
+    instrument: INSTR.cevis, how: 'Graded exercise test on the cycle ergometer, with the wearable on.',
     why: 'Aerobic capacity predicts how well you can work on arrival, when gravity returns.',
   },
   bmd: {
@@ -54,7 +57,7 @@ const BASE_METRICS: Record<string, BaseMetric> = {
   exercise: {
     id: 'exercise', system: 'muscular', label: 'Exercise, 7-day average', unit: 'min/day', decimals: 0, baseline: 120, typical: 116,
     provenance: 'LOGGED', threshold: { kind: 'provisional', text: 'Provisional threshold ≥ 90 min/day', limit: 90 },
-    instrument: INSTR.ared, how: 'Logged when you finish a session on ARED, T2 or CEVIS.',
+    instrument: INSTR.sessions, how: 'Logged when you finish a session on ARED, T2 or CEVIS.',
     why: 'Exercise minutes are the lever you control. Strength and bone follow them with a delay.',
   },
   disc: {
@@ -66,7 +69,7 @@ const BASE_METRICS: Record<string, BaseMetric> = {
   acuity: {
     id: 'acuity', system: 'neuro_ocular', label: 'Visual acuity', unit: 'decimal', decimals: 1, baseline: 1.0, typical: 1.0,
     provenance: 'LOGGED', threshold: { kind: 'provisional', text: 'Provisional threshold ≥ 0.8', limit: 0.8 },
-    instrument: INSTR.oct, how: 'Read the chart at the set distance, one eye at a time, and log the line.',
+    instrument: INSTR.chart, how: 'Read the chart at the set distance, one eye at a time, and log the line.',
     why: 'A drop in acuity is the symptom that matters most for mission work.',
   },
   wbc: {

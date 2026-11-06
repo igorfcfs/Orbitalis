@@ -191,6 +191,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .due a:hover { background: rgba(255, 255, 255, 0.1); }
 .due-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.due-dev { font-weight: 400; font-size: 12.5px; color: var(--ink-3); }
+.tile-dev { margin: 0; }
 .due-last { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
 .due-go { padding: 4px 14px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 13px; font-weight: 600; }
 .due a.due-more { grid-template-columns: 1fr; min-height: 32px; color: var(--ink-2); font-size: 13px; }
