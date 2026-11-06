@@ -1,6 +1,6 @@
 # ORBITALIS — Viabilidade e riscos
 
-Última avaliação: 2026-11-02T09:40:00-03:00 · HEAD `38f66ff` + 21 arquivos modificados ou novos · modo rápido
+Última avaliação: 2026-11-06T14:20:00-03:00 · HEAD `5953700` + 0 arquivos modificados ou novos · modo rápido
 Capacidade da equipe: não informada (edite esta linha: pessoas × horas por dia até o evento)
 Evento: 14 de novembro de 2026 (faltam 12 dias)
 
@@ -10,7 +10,7 @@ Mantido pela skill `orbitalis-viability` (`/orbitalis-viability`): compara o pro
 
 | Dimensão | Veredito | Por quê |
 | --- | --- | --- |
-| Técnica | **Viável com cortes** (provisório: capacidade não informada) | Os 15 requisitos obrigatórios estão atendidos, o typecheck está limpo, o build passa e os 134 testes passam. RF-18 e RF-23 a RF-27 entraram em 02/11. O que falta é a entrega (≈ 5,5 dias-pessoa) e os propostos RF-28 a RF-33 (≈ 16,5 dias-pessoa, ou 13 sem o cenário foguete). Para 12 dias corridos isso só cabe com mais de uma pessoa ou com cortes |
+| Técnica | **Viável com cortes** (provisório: capacidade não informada) | Os 15 requisitos obrigatórios estão atendidos, o typecheck está limpo, e os 158 testes passam. RF-18, RF-20 e RF-23 a RF-27 entraram em 02/11, e o dono aprovou e fez entrar RF-28 (catálogo de emergência, antes numerado 33) e RF-29 (emergência por regras). O que falta é a entrega (≈ 5,5 dias-pessoa) e os propostos restantes RF-29 (a parte de IA), RF-30, RF-31, RF-32, RF-33 e RF-34 (incluído em 04/11) (≈ 14 dias-pessoa, ou 10,5 sem o cenário foguete). Para 12 dias corridos isso só cabe com mais de uma pessoa ou com cortes |
 | Conformidade | **Em risco** | Dois riscos de severidade alta abertos: R-N01 (o FAQ do Space Apps proíbe começar a trabalhar nos desafios antes do hackathon; o primeiro commit é de 28/10) e R-N04 (a submissão exige a descrição do uso de SI). R-N04 se resolve em meio dia; R-N01 só a organização do evento resolve |
 
 ## 2. Esperado × atual
@@ -22,9 +22,9 @@ Desde 31/10: RF-18 e RF-23 a RF-27 saíram de "não atendido" para atendido (com
 | Obrigatórios (RF-01 a RF-15) | 15 de 15 atendidos |
 | Fortes (RF-16 a RF-22) | 7 de 7 atendidos |
 | Opcionais (RF-23 a RF-27) | 5 de 5 |
-| Propostos (RF-28 a RF-33) | 0 de 6 (RF-32 parcial) |
+| Propostos (RF-28 a RF-34) | 2 de 7 atendidos (RF-28, RF-32), 1 parcial (RF-29 sem a parte de IA); RF-34 incluído em 04/11, não iniciado |
 | Critérios de aceite (CLAUDE.md §15) | 11 atendidos, 3 parciais (atribuição no canvas, número sem selo, setas do teclado), 1 pendente (teste dos 10 segundos) |
-| Qualidade | Typecheck limpo; build ok; 139 de 139 testes em 10 arquivos (sem a chamada real ao modelo de IA nem a câmera real); feed do DONKI ao vivo (HTTP 200, 15 flares) |
+| Qualidade | Typecheck limpo; build ok; 158 de 158 testes em 13 arquivos (sem a chamada real ao modelo de IA nem a câmera real); feed do DONKI ao vivo (HTTP 200, 15 flares) |
 | Interface (captura de 31/10) | Nível 1 sem rolagem (702/702) e 8 sistemas na lista |
 | Regressões | Nenhuma. Outra sessão alterou `bodyShader.ts` (4 linhas) e `AstronautRig.tsx`: typecheck, testes e a captura do corpo seguem bem |
 
@@ -39,29 +39,30 @@ Desde 31/10: RF-18 e RF-23 a RF-27 saíram de "não atendido" para atendido (com
 | Texto da descrição do uso de SI | S | | R-N04 |
 | Rodapé de atribuição CC BY-SA no canvas | S | | R-P01 |
 | Declarações na interface: dose como aproximação, redação de [V1 4020], dados sintéticos | S | | R-N08, R-N09, R-N11 |
-| RF-32: corrigir `vo2`, `strength` e `acuity` e mostrar o aparelho nos pendentes e nos medidores | S | | |
+| ~~RF-32: corrigir `vo2`, `strength` e `acuity` e mostrar o aparelho nos pendentes e nos medidores~~ | S | | entregue em 06/11 (`165a18d`) |
 | Hospedar as fontes tipográficas em vez do Google Fonts | S | | R-P05, R-N05 |
 | Vídeo de 30 s (roteiro, captura, sem música com direitos) | M | app estável | R-N06 |
 
 Total de entrega: 8 S + 1 M ≈ 5,5 dias-pessoa.
 
-**Propostos** (só entram quando o dono os aprovar):
+**Propostos que sobraram**, em ordem de número. O RF-28 e o RF-29 já foram aprovados e entregues em 02/11 (restam a validação do RF-28 e o que ficou de fora do RF-29); RF-30 a RF-34 só entram quando o dono os aprovar:
 
 | Item | Tamanho | Depende de |
 | --- | --- | --- |
-| RF-33 catálogo de emergência e motor por regras (sem IA) | L | validação por médico ou flight surgeon; decisão da regra 3 |
-| RF-29 fluxo de emergência, cenário por sobreposição e registro de sintomas (RF-34) | L | RF-33; ficha clínica sintética |
-| RF-31 perfil da missão (`MissionProfile`) | M | |
-| RF-28 estação espacial e espaço sideral | M | RF-31 |
-| RF-28 base lunar | M | RF-31; fontes para 1/6 g |
-| RF-28 foguete (fase de lançamento) | L | RF-31; outro eixo de tempo |
+| Validação das ações de emergência (RF-28) por um flight surgeon ou médico e leitura do texto integral das quatro diretrizes e do manual da ISS | M | pessoa externa à equipe de código |
+| RF-29, o que ficou de fora: texto de IA na emergência (sem nomear causa), ficha clínica sintética, registro de sintomas (sem número desde 04/11; o RF-34 passou a ser a personalização epigenética) e o cenário por sobreposição | M | RF-18 já pronto; decisão do dono |
 | RF-30 CRUD de tripulantes mínimo | M | |
+| RF-31 perfil da missão (`MissionProfile`) | M | |
+| RF-33 estação espacial e espaço sideral | M | RF-31 |
+| RF-33 base lunar | M | RF-31; fontes para 1/6 g |
+| RF-33 foguete (fase de lançamento) | L | RF-31; outro eixo de tempo |
+| RF-34 personalização por exames epigenéticos (perfil sintético, notas de contexto no nível 3 e no pacote, testes de invariância do motor) | M | estudos do OSDR com dado epigenético a confirmar; decisões do dono (seção 6); R-N17 |
 
-Total dos propostos ≈ 16,5 dias-pessoa (13 sem o foguete). **Ordem de corte sugerida** para os propostos: RF-30, depois RF-28 foguete e base lunar, depois RF-31. A IA do RF-29 reaproveita a camada do RF-18, já pronta, mas continua dependendo do motor por regras (RF-33). Da spec, o que nunca cai: motor determinístico, selos, IDs de requisito, ação por tela e modo autônomo.
+Total dos propostos que sobraram ≈ 14 dias-pessoa (10,5 sem o foguete). **Ordem de corte sugerida:** RF-34 e RF-30, depois RF-33 foguete e base lunar, depois RF-31. O RF-34 não mexe no motor, mas é o de maior risco de conformidade entre os opcionais (R-N17). O que sobrou do RF-29 reaproveita a camada do RF-18, já pronta, e o motor por regras do RF-28 e RF-29 já existe. Da spec, o que nunca cai: motor determinístico, selos, IDs de requisito, ação por tela e modo autônomo.
 
 ## 4. Riscos segundo as diretrizes da NASA
 
-Os riscos marcados "condicional" só existem se o requisito proposto correspondente for implementado.
+Os riscos marcados "condicional" só existem se o requisito proposto correspondente for implementado. R-N17 foi acrescentado em 04/11 por causa do RF-34, sem reavaliar as demais fontes da NASA.
 
 | ID | Severidade | Diretriz (verificada em) | O que pode dar problema no ORBITALIS | Evidência | Mitigação | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -76,10 +77,11 @@ Os riscos marcados "condicional" só existem se o requisito proposto corresponde
 | R-N09 | Baixa | [V1 4020] §4.5.2 (texto integral, 31/10/2026): "Programs shall provide..." | A norma obriga o programa a fornecer 100% das necessidades; o app a usa como piso da ingestão registrada pela tripulante e diz que ela "viola o requisito" | `src/data/rules.ts` (`energy`), motivo do status | Reescrever como meta de fornecimento ("below the 100% provisioning target of [V1 4020]") e explicar em "About this number" | Aberto |
 | R-N10 | Baixa | [V1 4017] §4.4.3 e [V1 4011] §4.3.1 (texto integral, 31/10/2026) | A norma não dá limiar numérico para imunologia nem para cognição. Os limites do app são do projeto; deixá-los parecer da NASA enfraqueceria a regra 7 | `src/data/rules.ts` (`critRange`, limiares provisórios); os rótulos já dizem "Provisional" | Citar [V1 4017] e [V1 4011] como requisito governante em "About this number", mantendo "Provisional" | Aberto |
 | R-N11 | Média | [V1 7001] §7.1, [V1 7002], [V1 7003] §7.3 (texto integral, 31/10/2026) | Os registros de saúde devem ficar em formato permanente e protegido. O app guarda tudo em `localStorage` sem proteção, "Clear saved data" apaga, e o pacote é texto puro. Cresce com o histórico clínico do RF-29 | `src/state/store.ts` (`save`, `resetData`), `PacketPanel` em `src/ui/panels.tsx` | Declarar em Sources e no README: dados sintéticos, e uma implantação real exigiria [V1 7001] a [V1 7003]; oferecer exportação completa do registro | Aberto |
-| R-N12 | **Alta** (condicional) | [V1 3000] §3.1 e [V1 3004] §3.5 (texto integral, 31/10/2026) | O cuidado médico em missão é gerido pela Flight Medicine (flight surgeon, CMO), e a autonomia é uma capacidade a ser provida sob esse gerenciamento. Instruções de emergência ou uma "previsão do que aconteceu" feitas por IA, sem validação clínica, enfraquecem a Validade e contradizem a regra 3 | RF-29 e RF-33 propostos; `docs/ORBITALIS — Catálogo de Emergência (rascunho).md` ainda sem validação; o enunciado pede "guidance on treatments" e "diagnosis" | Rotular como apoio à decisão, validar o catálogo com médico ou flight surgeon antes da demo, deixar medicamentos de fora ([V1 3004 m]) e decidir a regra 3 | Aberto (condicional) |
+| R-N12 | **Alta** | [V1 3000] §3.1 e [V1 3004] §3.5 (texto integral, 31/10/2026) | O cuidado médico em missão é gerido pela Flight Medicine (flight surgeon, CMO), e a autonomia é uma capacidade a ser provida sob esse gerenciamento. Instruções de emergência ou uma "previsão do que aconteceu" feitas por IA, sem validação clínica, enfraquecem a Validade e contradizem a regra 3 | RF-28 e RF-29 entregues em 02/11 por regras em código (a regra 3 vale: a tela dá categoria de protocolo, nunca causa, e não há texto de IA na emergência); as 11 ações `EMG-` ainda sem validação clínica e com fontes conferidas só pelo resumo; o enunciado pede "guidance on treatments" e "diagnosis" | Rotular como apoio à decisão, validar o catálogo com médico ou flight surgeon antes da demo, deixar medicamentos de fora ([V1 3004 m], cumprido) e confirmar a regra 3 com o dono (adotada por padrão em 02/11) | Aberto: o risco agora é real, porque a emergência existe na interface |
 | R-N13 | Baixa | Diretrizes de mídia da NASA (texto integral, 31/10/2026) | Insígnia, logotipo e identificadores da NASA não são de domínio público, e o uso não pode sugerir endosso | Nenhum logotipo da NASA no app (insígnia removida do Z-2); porém nenhum aviso de não afiliação em `src`, `public/*.md` ou `index.html` | Uma linha em Credits, Sources e README ("not affiliated with or endorsed by NASA"); sem logotipos da NASA no vídeo e nos slides | Aberto |
 | R-N14 | Média (condicional) | Diretrizes de mídia da NASA, seção sobre SI (texto integral, 31/10/2026) | A informação que passou por um modelo de linguagem não pode ser atribuída diretamente à NASA, a insígnia não pode aparecer com imagens geradas por SI, e a NASA "strongly encourages" marcar o que é gerado por SI | Ainda não há LLM; as explicações de reserva são fixas e citam os IDs a partir do código | Texto de IA leva a marca "SI-generated"; nenhum texto de IA diz "NASA says"; as citações de requisito continuam vindo do código | Aberto (condicional) |
-| R-N15 | Baixa (condicional) | [V1 3007] e [V1 3008] §3.6, §3.7 (só li o início) | Evacuação médica é requisito de programa. O cenário de cruzeiro a Marte não tem evacuação; o fluxo de emergência e o RF-28 precisam dizer isso por cenário | RF-28 e RF-29 propostos | Levar a disponibilidade de evacuação no `MissionProfile`; reler o texto completo antes de citar | Aberto (condicional) |
+| R-N15 | Baixa (condicional) | [V1 3007] e [V1 3008] §3.6, §3.7 (só li o início) | Evacuação médica é requisito de programa. O cenário de cruzeiro a Marte não tem evacuação; o fluxo de emergência e o RF-33 precisam dizer isso por cenário | RF-33 e RF-29 propostos | Levar a disponibilidade de evacuação no `MissionProfile`; reler o texto completo antes de citar | Aberto (condicional) |
+| R-N17 | Média (condicional) | Termos do Space Apps, conteúdo proibido (texto integral, 31/10/2026); CLAUDE.md §13 (LSDA e Standard Measures fora por exigirem IRB) e regras 1 a 3 | Perfil epigenético é dado genético e de saúde sensível: se vier de dado real de astronauta, viola IRB e o acordo de uso; se for sintético mas parecer real, confunde o avaliador. Além disso, não conheço limiar publicado que ligue um marcador epigenético a um status, então qualquer uso para decidir seria suposição sem fonte (Validade) e quebraria a regra 1. Não verifiquei quais estudos do OSDR têm dado epigenético | RF-34 incluído em 04/11, ainda sem código; o RF-26 só mostra estudos públicos como contexto | Perfil 100% sintético e rotulado "synthetic epigenetic profile"; só escolhe e ordena notas de contexto de uma lista fechada, com ID de estudo do OSDR; teste de invariância do motor; nenhum exame epigenético na fila (não há aparelho permitido); confirmar os estudos antes de citar | Aberto (condicional) |
 | R-N16 | Baixa | NASA-STD-3001 Vol. 2 (não verificado) | As afirmações de interface (forma e palavra no status, contraste, tamanho de texto) não foram comparadas com o Volume 2 | Contraste AA não auditado | Ler as seções de exibição no próximo modo completo; até lá, não citar o Vol. 2 | Aberto |
 
 ## 5. Outros riscos do projeto
@@ -100,15 +102,18 @@ Os riscos marcados "condicional" só existem se o requisito proposto corresponde
 ## 6. Decisões em aberto
 
 1. **Trabalho antes do hackathon e licenças CC** (R-N01, R-N02): perguntar à organização. Quem decide: o dono do produto. Destrava a decisão de escopo inteira.
-2. **A regra 3 vale na emergência?** (diagnóstico × assessment; R-N12). Quem decide: o dono. Destrava RF-29, RF-33 e RF-18.
+2. **A regra 3 vale na emergência?** (diagnóstico × assessment; R-N12). Quem decide: o dono. Adotei por padrão que **vale** (categoria de protocolo, nunca causa) ao implementar RF-28 e RF-29; confirme ou mande reverter.
 3. **Capacidade da equipe** (R-P07). Quem decide: o dono. Destrava o veredito técnico.
-4. **Aprovar ou recusar RF-28 a RF-33**, e os números sugeridos RF-33 e RF-34.
-5. **Foguete é a fase de lançamento?** (RF-28).
+4. **Aprovar ou recusar RF-30 a RF-34** (RF-28 e RF-29 foram aprovados e entregues em 02/11). O número RF-34 que eu havia sugerido para o registro de sintomas ficou com a sua personalização epigenética (04/11); o registro de sintomas segue sem número. Em 02/11 os números 28 e 33 foram trocados: o catálogo de emergência, pré-requisito do RF-29, passou a RF-28, e a adaptabilidade em 4 cenários passou a RF-33.
+5. **Foguete é a fase de lançamento?** (RF-33).
 6. **Licença do projeto**: MIT ou Apache 2.0 (R-N03).
+7. **RF-34, escopo da personalização** (R-N17). Quem decide: o dono. Adotei por padrão que o perfil só escolhe e ordena notas de contexto (nunca status, limiar, projeção nem ação), que o exame é pré-voo e sintético, e que a prioridade é a de corte. Confirme, ou diga se a personalização pode reordenar a fila de medições (eu recomendo que não). Detalhes no documento de status.
 
 ## 7. Histórico
 
 | Data | HEAD | Modo | Técnica | Conformidade | Obrigatórios | Testes | Riscos abertos (A/M/B) | Nota |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 06/11/2026 | `5953700` | rápido | Viável com cortes (provisório) | Em risco | 15 de 15 | 158 de 158 | 3 / 12 / 9 | RF-32 entregue; botão Emergency em todas as telas (RF-29). Tudo commitado. Menu e fluxo de emergência não abertos no navegador. Fontes da NASA não reverificadas (nada na área sensível mudou) |
+| 02/11/2026 | `fc22393` (+19) | rápido | Viável com cortes (provisório) | Em risco | 15 de 15 | 154 de 154 | 3 / 12 / 9 | RF-28 (catálogo de emergência) e RF-29 (emergência por regras, sem texto de IA) entregues; números 28 e 33 trocados. As ações de emergência não foram validadas por médico. Fontes da NASA não reverificadas |
 | 02/11/2026 | `38f66ff` (+21) | rápido | Viável com cortes (provisório) | Em risco | 15 de 15 | 139 de 139 | 3 / 12 / 9 | RF-18 e RF-23 a RF-27 entregues. Fontes da NASA não reverificadas (só `vite.config.ts` mudou na área sensível, e o OSDR responde ao vivo) |
 | 31/10/2026 | `c600f8f` (+32) | completo | Viável com cortes (provisório) | Em risco | 15 de 15 | 112 de 112 | 3 / 12 / 9 | Primeira avaliação. Fontes da NASA verificadas em texto integral |

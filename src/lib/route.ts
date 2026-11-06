@@ -3,7 +3,7 @@ import { ASTRONAUTS } from '../data/astronauts'
 import { METRICS, SYSTEMS } from '../data/systems'
 import type { SystemId } from '../types'
 
-export type BodyView = 'home' | 'queue' | 'diary' | 'packet'
+export type BodyView = 'home' | 'queue' | 'diary' | 'packet' | 'emergency'
 
 export type Route =
   | { level: 0; page?: 'sources' | 'timeline' }
@@ -11,7 +11,7 @@ export type Route =
   | { level: 2; id: string; system: SystemId }
   | { level: 3; id: string; system: SystemId; metric: string; log: boolean }
 
-const VIEWS: BodyView[] = ['queue', 'diary', 'packet']
+const VIEWS: BodyView[] = ['queue', 'diary', 'packet', 'emergency']
 
 export function parseHash(hash: string): Route {
   const [, root, id, system, metric, extra] = hash.replace(/^#/, '').split('/')

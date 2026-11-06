@@ -9,6 +9,7 @@ import { go, paths, type Route } from '../lib/route'
 import { ATTRIBUTION, LAYERS } from '../scene/anatomy'
 import { useSim, useStore } from '../state/store'
 import type { Astronaut, Status } from '../types'
+import { EmergencyLauncher } from './Emergency'
 import { StatusPill } from './primitives'
 
 const WORDS = ['No one', 'One', 'Two', 'Three', 'Four']
@@ -39,6 +40,7 @@ export function Hud() {
           <i aria-hidden="true" />
           <span>{sim.link === 'blackout' ? 'Blackout · autonomous' : `Earth ${LINK_DELAY_MIN} min`}</span>
         </div>
+        <EmergencyLauncher />
         <button type="button" className="icon-btn" aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenu(!menuOpen)}>
           <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </button>

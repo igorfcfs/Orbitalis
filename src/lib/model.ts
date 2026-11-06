@@ -2,6 +2,7 @@ import { ACTIONS } from '../data/actions'
 import { ASTRONAUTS } from '../data/astronauts'
 import { NOISE } from '../data/rules'
 import { METRICS, PRIORITY_ORDER, SYSTEMS, SYSTEM_IDS } from '../data/systems'
+import { CATEGORY_LABEL, CATEGORY_STEPS, triage, type EmergencySession } from '../engine/emergency'
 import { evaluateMetric, worst } from '../engine/status'
 import { regress, projectionWindow } from '../engine/projection'
 import type {
@@ -333,7 +334,7 @@ export function packetItems(astro: Astronaut, sim: Sim, flags: Record<string, tr
   return items
 }
 
-export function packetText(astro: Astronaut, sim: Sim, flags: Record<string, true>, diary: Decision[]): string {
+export function packetText(astro: Astronaut, sim: Sim, flags: Record<string, true>, diary: Decision[], emergency?: EmergencySession): string {
   const items = packetItems(astro, sim, flags)
   const decisions = diary.filter((d) => d.astronautId === astro.id).slice(-10)
   const lines = [
@@ -357,7 +358,43 @@ export function packetText(astro: Astronaut, sim: Sim, flags: Record<string, tru
   for (const d of decisions) {
     lines.push(`  Day ${d.missionDay} · ${d.actionId} · ${d.decision} · status ${STATUS_LABEL[d.statusSnapshot]}${d.autonomous ? ' · autonomous' : ''}`)
   }
+  if (emergency && triage(emergency.answers)) lines.push('', ...emergencyPacketLines(astro, emergency))
   return lines.join('\n')
+}
+
+// ---------- Emergência (RF-28, RF-29) ----------
+
+/** Passos da emergência, do catálogo fechado, na ordem da categoria. Paciente CMO: a consulta vai ao CMO reserva (RF-21). */
+export function emergencySteps(patient: Astronaut, session: EmergencySession): ActionDef[] {
+  const t = triage(session.answers)
+  if (!t) return []
+  return CATEGORY_STEPS[t.category].map((id) =>
+    id === 'CMO-CONSULT' && patient.isCMO ? { ...ACTIONS[id], label: 'Consult the backup CMO' } : ACTIONS[id],
+  )
+}
+
+/**
+ * O que o registro do paciente mostra, sem nomear causa: métricas fora do nominal e os sinais cardíacos (frequência e pressão),
+ * cada um com unidade, pré-voo e selo. Quando nada aponta para o coração, a tela diz isso.
+ */
+export function emergencySignals(patient: Astronaut, sim: Sim): { metrics: ResolvedMetric[]; cardiacClear: boolean } {
+  const off = SYSTEM_IDS.flatMap((s) => systemMetrics(patient, s, sim)).filter((m) => m.status !== 'nominal')
+  const cardiac = ['rhr', 'sbp'].map((id) => resolveMetric(patient, id, sim))
+  const merged = [...off, ...cardiac.filter((c) => !off.some((o) => o.id === c.id))]
+  return { metrics: merged.slice(0, 6), cardiacClear: cardiac.every((c) => c.status === 'nominal') }
+}
+
+export function emergencyPacketLines(patient: Astronaut, s: EmergencySession): string[] {
+  const t = triage(s.answers)
+  const lines = [
+    'Emergency timeline',
+    `  Reported at Day ${s.startedDay} (${s.startedTs}) for ${patient.name}${s.reporterId ? ` by ${getAstronaut(s.reporterId).name}` : ''}. Link: ${s.link === 'blackout' ? 'blackout (autonomous)' : 'delayed'}.`,
+    `  Protocol category by rules: ${t ? CATEGORY_LABEL[t.category] : 'not yet determined'}. No cause was named.`,
+  ]
+  const done = Object.entries(s.done).sort((a, b) => a[1].ts.localeCompare(b[1].ts))
+  if (!done.length) lines.push('  No step marked done yet.')
+  for (const [id, d] of done) lines.push(`  ${d.ts} · ${id} · ${ACTIONS[id]?.label ?? id}${d.autonomous ? ' · autonomous' : ''}`)
+  return lines
 }
 
 export { signed, shortUnit }

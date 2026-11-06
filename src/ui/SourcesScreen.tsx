@@ -54,6 +54,8 @@ const COVERAGE: { id: string; text: string; where: string }[] = [
   { id: 'RF-25', text: 'Crew status across the whole mission', where: 'Menu → Crew timeline' },
   { id: 'RF-26', text: 'Space biology studies from NASA OSDR', where: 'System → How it works' },
   { id: 'RF-27', text: 'Outcome of each action: system status then and now', where: 'Decision diary' },
+  { id: 'RF-28', text: 'Closed catalog of emergency actions, each with its protocol cited', where: 'Emergency button in the top bar, on every screen' },
+  { id: 'RF-29', text: 'Emergency flow by rules: protocol category, what the record shows, ordered steps, works in blackout', where: 'Emergency button in the top bar, on every screen' },
 ]
 
 const PROVS = Object.keys(PROVENANCE_HELP) as Provenance[]
@@ -127,7 +129,7 @@ export function SourcesScreen() {
           <ul className="decl small">
             <li>The crew is fictional. Apart from the calibrations above, all physiological signals are synthetic and illustrative.</li>
             <li>Status is computed by deterministic code and never by AI. Explanations are written by an AI model only when the server has an API key, from numbers the code computed. The model picks actions by ID from the closed catalog, and its text is rejected if it adds a number, names a medication or diagnosis, or breaks the length limits. Without a key, or on any failure, the fixed catalog text is shown, marked “Offline explanation”.</li>
-            <li>Actions come from a closed catalog. The app gives no diagnosis, medication or dose.</li>
+            <li>Actions come from a closed catalog. The app gives no diagnosis, medication or dose. The emergency flow picks a protocol category by rules from closed answers and names no cause. Its steps cite published guidelines checked from summaries only, and need a flight surgeon’s validation before any real use.</li>
             <li>Prototype assumption, not a published value: outside the hull only the EVA suit shields you, modeled as twice the 1.8 mSv/day measured inside a spacecraft. Replace it with the mission’s own dosimetry.</li>
             <li>The characters, their hair, eyes, skin and uniforms, the suit and the habitat are drawn for this prototype. The anatomical body is a male atlas model; the two women use reshaped proportions, not a female anatomy model.</li>
             <li>Each body reflects the day’s measurements: limbs thin as strength and exercise fall below plan, the build follows body mass, and short sleep shows as shadows under the eyes. This is a drawing aid. It never sets a status.</li>

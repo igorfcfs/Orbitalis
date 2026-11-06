@@ -230,11 +230,12 @@ export function PacketPanel({ astro, sim }: { astro: Astronaut; sim: Sim }) {
   const flags = useStore((s) => s.flags)
   const diary = useStore((s) => s.diary)
   const sent = useStore((s) => s.sent[astro.id])
+  const emergency = useStore((s) => s.emergencies[astro.id])
   const sendPacket = useStore((s) => s.sendPacket)
   const toggleFlag = useStore((s) => s.toggleFlag)
   const [copied, setCopied] = useState(false)
   const items = packetItems(astro, sim, flags)
-  const text = packetText(astro, sim, flags, diary)
+  const text = packetText(astro, sim, flags, diary, emergency)
 
   const copy = async () => {
     try {

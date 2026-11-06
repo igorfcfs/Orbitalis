@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { create } from 'zustand'
+import { EMPTY_ANSWERS, type EmergencyAnswers, type EmergencySession } from '../engine/emergency'
 import { MISSION_DAY } from '../lib/model'
 import type { Decision, Measurement, Sim, SystemId } from '../types'
 
@@ -14,12 +15,14 @@ interface Persisted {
   diary: Decision[]
   flags: Record<string, true>
   sent: Record<string, { ts: string; day: number; link: 'delayed' | 'blackout' }>
+  /** Emergências abertas, uma por paciente (RF-29) */
+  emergencies: Record<string, EmergencySession>
 }
 
 const KEY = 'orbitalis.v1'
 
 function load(): Persisted {
-  const empty: Persisted = { measurements: [], diary: [], flags: {}, sent: {} }
+  const empty: Persisted = { measurements: [], diary: [], flags: {}, sent: {}, emergencies: {} }
   try {
     const raw = window.localStorage.getItem(KEY)
     return raw ? { ...empty, ...JSON.parse(raw) } : empty
@@ -75,9 +78,13 @@ interface Store extends Persisted {
   toggleFlag: (key: string) => void
   sendPacket: (astroId: string) => void
   resetData: () => void
+  openEmergency: (patientId: string) => void
+  answerEmergency: (patientId: string, patch: Partial<EmergencyAnswers>, reporterId?: string | null) => void
+  doneEmergencyStep: (patientId: string, actionId: string) => void
+  closeEmergency: (patientId: string) => void
 }
 
-const persistedOf = (s: Store): Persisted => ({ measurements: s.measurements, diary: s.diary, flags: s.flags, sent: s.sent })
+const persistedOf = (s: Store): Persisted => ({ measurements: s.measurements, diary: s.diary, flags: s.flags, sent: s.sent, emergencies: s.emergencies })
 
 /** Parâmetros de URL para depurar e demonstrar: ?suit=1&xray=1&solar=1&day=200&link=blackout */
 function urlFlags() {
@@ -156,7 +163,35 @@ export const useStore = create<Store>((set, get) => {
       const s = get()
       commit({ sent: { ...s.sent, [astroId]: { ts: new Date().toISOString(), day: s.day, link: s.link } } })
     },
-    resetData: () => commit({ measurements: [], diary: [], flags: {}, sent: {} }),
+    resetData: () => commit({ measurements: [], diary: [], flags: {}, sent: {}, emergencies: {} }),
+    openEmergency: (patientId) => {
+      const s = get()
+      if (s.emergencies[patientId]) return
+      const session: EmergencySession = {
+        patientId, reporterId: null, answers: { ...EMPTY_ANSWERS }, startedTs: new Date().toISOString(), startedDay: s.day, link: s.link, done: {},
+      }
+      commit({ emergencies: { ...s.emergencies, [patientId]: session } })
+    },
+    answerEmergency: (patientId, patch, reporterId) => {
+      const s = get()
+      const cur = s.emergencies[patientId]
+      if (!cur) return
+      const answers = { ...cur.answers, ...patch }
+      // Mudou a resposta que decide a categoria: os passos já marcados valem para a categoria anterior e saem
+      const decisive = (['responds', 'breathing', 'collapsed', 'prior'] as const).some((k) => k in patch && patch[k] !== cur.answers[k])
+      commit({ emergencies: { ...s.emergencies, [patientId]: { ...cur, answers, reporterId: reporterId === undefined ? cur.reporterId : reporterId, done: decisive ? {} : cur.done } } })
+    },
+    doneEmergencyStep: (patientId, actionId) => {
+      const s = get()
+      const cur = s.emergencies[patientId]
+      if (!cur || cur.done[actionId]) return
+      const done = { ...cur.done, [actionId]: { ts: new Date().toISOString(), day: s.day, autonomous: s.link === 'blackout' } }
+      commit({ emergencies: { ...s.emergencies, [patientId]: { ...cur, done } } })
+    },
+    closeEmergency: (patientId) => {
+      const { [patientId]: _gone, ...rest } = get().emergencies
+      commit({ emergencies: rest })
+    },
   }
 })
 

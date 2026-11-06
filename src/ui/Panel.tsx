@@ -13,6 +13,7 @@ import { useFeed } from '../lib/spaceWeather'
 import { useExplanation } from '../lib/useExplanation'
 import { useSim, useStore } from '../state/store'
 import type { Astronaut, ResolvedMetric, Sim, Status, SystemId } from '../types'
+import { EmergencyPanel } from './Emergency'
 import { DiaryPanel, LogPanel, PacketPanel, QueuePanel } from './panels'
 import {
   ActionCard, AiTag, Crumbs, MetricBadge, MetricChart, NoAction, OfflineTag, PROVENANCE_HELP, ProvenanceBadge, Reading, Sparkline, StatusPill,
@@ -379,6 +380,7 @@ export function Panel({ route }: { route: BodyRoute }) {
         {route.level === 1 && route.view === 'queue' && <QueuePanel astro={astro} sim={sim} />}
         {route.level === 1 && route.view === 'diary' && <DiaryPanel astro={astro} sim={sim} />}
         {route.level === 1 && route.view === 'packet' && <PacketPanel astro={astro} sim={sim} />}
+        {route.level === 1 && route.view === 'emergency' && <EmergencyPanel astro={astro} sim={sim} />}
         {route.level === 2 && <System astro={astro} system={route.system} sim={sim} />}
         {route.level === 3 && !route.log && <Metric astro={astro} system={route.system} metric={route.metric} sim={sim} />}
         {route.level === 3 && route.log && <LogPanel astro={astro} system={route.system} metric={route.metric} sim={sim} />}

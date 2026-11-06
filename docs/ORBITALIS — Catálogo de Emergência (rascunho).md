@@ -1,6 +1,8 @@
 # ORBITALIS — Catálogo de ações de emergência (rascunho)
 
-30 de outubro de 2026 · proposta de RF-33, pré-requisito do RF-29 · para a equipe AstroCoders
+30 de outubro de 2026 · RF-28 (pré-requisito do RF-29; numerado 33 até 02/11) · para a equipe AstroCoders
+
+**Estado em 02/11/2026:** implementado em `src/data/actions.ts` (as 11 ações `EMG-`), `src/engine/emergency.ts` (triagem e ordem dos passos) e `src/ui/Emergency.tsx`. O texto abaixo continua sendo o rascunho de origem e **ainda não foi validado por um flight surgeon ou médico**; as fontes seguem conferidas só pelo resumo. A interface usou a lista de entradas da seção 2 mais a pergunta "O paciente desmaiou?", que a síncope exige.
 
 > **Aviso.** Rascunho para discussão, não aconselhamento médico: o ORBITALIS é um protótipo com tripulação fictícia. Antes de aparecer como instrução numa demonstração, cada ação precisa ser validada por um flight surgeon ou médico e conferida no texto integral da fonte. Verifiquei as fontes pelo resumo e pelos dados bibliográficos; não consegui abrir o texto integral de nenhuma das quatro diretrizes citadas (acesso bloqueado), e o PDF do manual de emergência da ISS está protegido por senha.
 
@@ -66,7 +68,7 @@ Onze novas, mais duas que já existem no catálogo. O texto da interface fica em
 - **Parâmetros numéricos de compressão e de choque**: só depois de conferir o texto da AHA 2025.
 - **Nome de causa** ("infarto", "arritmia"): fica fora enquanto a regra 3 valer.
 
-## 6. Variação por cenário (RF-28)
+## 6. Variação por cenário (RF-33)
 
 - **Estação espacial e espaço sideral:** microgravidade, o caso que a diretriz cobre. No espaço sideral o blackout é o caso normal.
 - **Base lunar:** gravidade parcial. A evidência para RCP em hipogravidade é limitada: a revisão de escopo de [Overbeek et al. (2024)](https://doi.org/10.1016/j.resplu.2024.100762) achou 2 estudos de hipogravidade entre 26, e um simulador de [2026](https://doi.org/10.1038/s41526-026-00577-1) ainda chama a eficácia de incerta. O catálogo teria de dizer que a técnica terrestre se aplica com ressalva.
