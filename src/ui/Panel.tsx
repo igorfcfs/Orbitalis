@@ -1,7 +1,7 @@
 import { HAZARD_LABEL, METRICS, SYSTEMS } from '../data/systems'
 import { HORIZON_DAYS } from '../engine/projection'
 import {
-  CRUISE_DOSE_RATE, MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, astronautStatus, careerAtArrival, dueItems, estimatedHeight,
+  SUIT_SHIELD_FACTOR, missionLength, profileOf, STATUS_GLYPH, STATUS_LABEL, astronautStatus, careerAtArrival, dueItems, estimatedHeight,
   exposure, flagKey, fmt, getAstronaut, headline, isLoggable, metricStats, priorityAction, resolveMetric, shortUnit, signed, systemActions,
   systemMetrics, systemStatus,
 } from '../lib/model'
@@ -151,8 +151,8 @@ function ExposureCard({ astro, sim }: { astro: Astronaut; sim: Sim }) {
   return (
     <section className={`exposure${sim.suit ? ' eva' : ''}`} aria-label="Radiation exposure">
       <div className="seg" role="group" aria-label="Exposure">
-        <button type="button" aria-pressed={!sim.suit} onClick={() => setSuit(false)}>Habitat</button>
-        <button type="button" aria-pressed={sim.suit} onClick={() => setSuit(true)}>EVA suit</button>
+        <button type="button" aria-pressed={!sim.suit} onClick={() => setSuit(false)}>{profileOf(sim.scenario).inside}</button>
+        {profileOf(sim.scenario).eva.available && <button type="button" aria-pressed={sim.suit} onClick={() => setSuit(true)}>EVA suit</button>}
       </div>
       <div className="rate">
         <span className="num">{fmt(ex.rate, 1)}</span>
@@ -160,15 +160,16 @@ function ExposureCard({ astro, sim }: { astro: Astronaut; sim: Sim }) {
         <ProvenanceBadge kind={ex.provenance} />
       </div>
       <p className="small">{ex.shielding}</p>
+      <p className="small muted">{profileOf(sim.scenario).dose.quantity === 'equivalent' ? 'Dose equivalent. ' : 'Effective dose. '}{profileOf(sim.scenario).dose.source}.{profileOf(sim.scenario).dose.assumed ? ' Not a published value for this crew.' : ''}</p>
       <dl className="exp-list">
-        <dt>Career dose at Day {MISSION_LENGTH}</dt>
+        <dt>Career dose at Day {missionLength(sim)}</dt>
         <dd className={`mono ${over ? 's-watch' : ''}`}>{fmt(arrival, 0)} mSv</dd>
         <dt>Career limit [V1 4030]</dt>
         <dd className="mono">&lt; {fmt(limit, 0)} mSv</dd>
       </dl>
       {sim.suit && (
         <p className="small muted">
-          Suit shielding is a prototype assumption: {fmt(ex.rate / CRUISE_DOSE_RATE, 0)}× the {CRUISE_DOSE_RATE} mSv/day measured inside the hull. Replace it with the mission’s dosimetry.
+          Suit shielding is a prototype assumption: {SUIT_SHIELD_FACTOR}× the {fmt(profileOf(sim.scenario).dose.rate, 2)} mSv/day of the scenario. Replace it with the mission’s dosimetry.
         </p>
       )}
     </section>

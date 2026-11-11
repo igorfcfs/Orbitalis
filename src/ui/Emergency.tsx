@@ -4,7 +4,7 @@ import {
   CATEGORY_LABEL, missingAnswers, triage, type Breathing, type EmergencyAnswers, type Onset, type Prior, type Yes,
 } from '../engine/emergency'
 import {
-  LINK_DELAY_MIN, STATUS_GLYPH, STATUS_LABEL, astronautStatus, emergencySignals, emergencySteps, fmt, shortUnit,
+  linkText, STATUS_GLYPH, STATUS_LABEL, astronautStatus, emergencySignals, emergencySteps, fmt, shortUnit,
 } from '../lib/model'
 import { paths } from '../lib/route'
 import { useSim, useStore } from '../state/store'
@@ -117,7 +117,7 @@ export function EmergencyPanel({ astro, sim }: { astro: Astronaut; sim: Sim }) {
       </nav>
       <p className="muted small">Prototype with a fictional crew, not medical advice. Steps come from a closed catalog and need a flight surgeon’s validation before real use.</p>
       <div className={`linkbox ${sim.link}`}>
-        <strong>{blackout ? 'Blackout: act on your own' : `Earth link delayed ${LINK_DELAY_MIN} min`}</strong>
+        <strong>{blackout ? 'Blackout: act on your own' : `Earth link: ${linkText(sim.scenario, 'delayed').toLowerCase()}`}</strong>
         <span className="small">{blackout ? 'Everything here runs on board. Steps are logged as autonomous.' : 'Do not wait for the ground to start. Everything here runs on board.'}</span>
       </div>
 

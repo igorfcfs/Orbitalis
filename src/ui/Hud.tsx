@@ -1,15 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { ASTRONAUTS } from '../data/astronauts'
+import { linkText, profileOf } from '../data/scenarios'
 import { BODY_ORDER, SYSTEMS } from '../data/systems'
 import {
-  LINK_DELAY_MIN, MISSION_DAY, MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, astronautStatus, attentionSystems, dueItems, getAstronaut, headline,
+  STATUS_GLYPH, STATUS_LABEL, astronautStatus, attentionSystems, dueItems, getAstronaut, headline,
   systemDrivers, systemStatus,
 } from '../lib/model'
 import { go, paths, type Route } from '../lib/route'
 import { ATTRIBUTION, LAYERS } from '../scene/anatomy'
-import { useSim, useStore } from '../state/store'
+import { useSim, useStore, xrayAllowed } from '../state/store'
 import type { Astronaut, Status } from '../types'
 import { EmergencyLauncher } from './Emergency'
+import { ScenarioSection } from './ScenarioCard'
 import { StatusPill } from './primitives'
 
 const WORDS = ['No one', 'One', 'Two', 'Three', 'Four']
@@ -21,6 +23,7 @@ export function Hud() {
   const sim = useSim()
   const setMenu = useStore((s) => s.setMenu)
   const menuOpen = useStore((s) => s.menuOpen)
+  const scn = profileOf(sim.scenario)
   return (
     <header className="hud">
       <a className="brand" href={paths.crew} aria-label="Orbitalis, back to the crew">
@@ -31,14 +34,24 @@ export function Hud() {
         <span>ORBITALIS</span>
       </a>
       <div className="hud-right">
-        <div className="chip-day" title="Mission day">
-          <span className="label">Day</span>
-          <span className="mono"><b>{sim.day}</b><i>/{MISSION_LENGTH}</i></span>
-          <span className="bar" style={{ ['--p' as string]: `${Math.min(100, (sim.day / MISSION_LENGTH) * 100)}%` }} />
-        </div>
+        <button type="button" className="chip-scn" title={`${scn.place}. Open the menu to change the scenario.`} onClick={() => setMenu(true)}>
+          <span className="label">{scn.short}</span>
+          <span className="mono">{scn.gravity.g === 0 ? '0 g' : `${scn.gravity.label}`}</span>
+        </button>
+        {scn.clock === 'day' ? (
+          <div className="chip-day" title="Mission day">
+            <span className="label">Day</span>
+            <span className="mono"><b>{sim.day}</b><i>/{scn.length}</i></span>
+            <span className="bar" style={{ ['--p' as string]: `${Math.min(100, (sim.day / scn.length) * 100)}%` }} />
+          </div>
+        ) : (
+          <div className="chip-day" title="Launch phase, counted in hours">
+            <span className="label">Launch day</span>
+          </div>
+        )}
         <div className={`chip-link${sim.link === 'blackout' ? ' off' : ''}`} title="The app works fully on board. Earth is never required to act.">
           <i aria-hidden="true" />
-          <span>{sim.link === 'blackout' ? 'Blackout · autonomous' : `Earth ${LINK_DELAY_MIN} min`}</span>
+          <span>{sim.link === 'blackout' ? `${linkText(sim.scenario, 'blackout')} · autonomous` : linkText(sim.scenario, 'delayed')}</span>
         </div>
         <EmergencyLauncher />
         <button type="button" className="icon-btn" aria-label="Menu" aria-expanded={menuOpen} onClick={() => setMenu(!menuOpen)}>
@@ -137,13 +150,16 @@ export function Dock({ route }: { route: Exclude<Route, { level: 0 }> }) {
   const setSuit = useStore((s) => s.setSuit)
   const setXray = useStore((s) => s.setXray)
   const atHome = route.level === 1 && route.view === 'home'
+  const scn = profileOf(useStore((s) => s.scenario))
+  // No foguete, na tela inicial do astronauta, não há traje, raio-X nem vista para restaurar: sem dock vazio
+  if (!scn.eva.available && !xrayAllowed(suit) && atHome) return null
   return (
     <div className="dock" role="toolbar" aria-label="View tools">
-      <button type="button" className={`dock-btn${suit ? ' on' : ''}`} aria-pressed={suit} aria-label={suit ? 'Take off the EVA suit' : 'Put on the EVA suit'} onClick={() => setSuit(!suit)}>
+      {scn.eva.available && <button type="button" className={`dock-btn${suit ? ' on' : ''}`} aria-pressed={suit} aria-label={suit ? 'Take off the EVA suit' : 'Put on the EVA suit'} title={scn.eva.note} onClick={() => setSuit(!suit)}>
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5a6.5 6.5 0 0 0-6.5 6.5v2.2c0 3.2 2.1 5.9 5 6.6V20H8.5a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2H13v-2.2c2.9-.7 5-3.4 5-6.6V9A6.5 6.5 0 0 0 12 2.5Zm-4.5 6.8c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5v1.6H7.5V9.3Z" fill="currentColor" /></svg>
         <span>{suit ? 'Take off suit' : 'EVA suit'}</span>
-      </button>
-      {!suit && <button type="button" className={`dock-btn${xray ? ' on' : ''}`} aria-pressed={xray} aria-label="X-ray view, all anatomy layers" onClick={() => setXray(!xray)}>
+      </button>}
+      {xrayAllowed(suit) && <button type="button" className={`dock-btn${xray ? ' on' : ''}`} aria-pressed={xray} aria-label="X-ray view, all anatomy layers" onClick={() => setXray(!xray)}>
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3c0 1.2-.7 2.2-1.7 2.7V9h3.2a1 1 0 1 1 0 2H13v2h3.5a1 1 0 1 1 0 2H13v2.3l2.6 3.7a1 1 0 1 1-1.6 1.2L12 19.4 10 22.2a1 1 0 1 1-1.6-1.2l2.6-3.7V15H7.5a1 1 0 1 1 0-2H11v-2H7.5a1 1 0 1 1 0-2h3.2V7.7A3 3 0 0 1 12 2Z" fill="currentColor" /></svg>
         <span>X-ray</span>
       </button>}
@@ -285,6 +301,7 @@ export function MenuSheet({ route }: { route: Route }) {
   const resetData = useStore((s) => s.resetData)
   const setCredits = useStore((s) => s.setCredits)
   const sim = useSim()
+  const scn = profileOf(sim.scenario)
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false)
@@ -319,23 +336,26 @@ export function MenuSheet({ route }: { route: Route }) {
           <a className="sheet-item" href={paths.sources} onClick={close}><span>Sources, data and features</span></a>
           <button type="button" className="sheet-item" onClick={() => { close(); setCredits(true) }}><span>Credits</span></button>
         </section>
+        <ScenarioSection onGo={close} />
         <section>
           <h3 className="label">Simulation</h3>
-          <label className="sim-row">
-            <span>Mission day</span><span className="mono">Day {day}</span>
-            <input type="range" min={10} max={MISSION_LENGTH} step={1} value={day} onChange={(e) => setDay(Number(e.target.value))} aria-label="Mission day" />
-          </label>
+          {scn.length > 1 && (
+            <label className="sim-row">
+              <span>Mission day</span><span className="mono">Day {day}</span>
+              <input type="range" min={scn.minDay} max={scn.length} step={1} value={day} onChange={(e) => setDay(Number(e.target.value))} aria-label="Mission day" />
+            </label>
+          )}
           <label className="check">
             <input type="checkbox" checked={solar} onChange={(e) => setSolar(e.target.checked)} />
             <span>Solar particle event</span>
           </label>
           <fieldset>
             <legend className="label">Earth link</legend>
-            <label className="check"><input type="radio" name="link" checked={link === 'delayed'} onChange={() => setLink('delayed')} /><span>Delayed ({LINK_DELAY_MIN} min)</span></label>
-            <label className="check"><input type="radio" name="link" checked={link === 'blackout'} onChange={() => setLink('blackout')} /><span>Blackout (conjunction)</span></label>
+            <label className="check"><input type="radio" name="link" checked={link === 'delayed'} onChange={() => setLink('delayed')} /><span>{scn.link.delayText}</span></label>
+            <label className="check"><input type="radio" name="link" checked={link === 'blackout'} onChange={() => setLink('blackout')} /><span>{scn.link.blackoutText}</span></label>
           </fieldset>
           <div className="btn-row">
-            <button type="button" className="btn" onClick={() => setDay(MISSION_DAY)}>Day {MISSION_DAY}</button>
+            <button type="button" className="btn" onClick={() => setDay(scn.defaultDay)}>{scn.clock === 'day' ? `Day ${scn.defaultDay}` : 'Reset'}</button>
             <button type="button" className="btn" onClick={resetData}>Clear saved data</button>
           </div>
         </section>

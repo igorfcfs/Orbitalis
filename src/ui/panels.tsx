@@ -3,7 +3,7 @@ import { ACTIONS } from '../data/actions'
 import { OUTCOME_LABEL, adherenceStreak, decisionOutcome } from '../lib/adherence'
 import { METRICS, SYSTEMS } from '../data/systems'
 import {
-  LINK_DELAY_MIN, MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, dueItems, fmt, isLoggable, packetItems, packetText, resolveMetric,
+  missionLength, profileOf, STATUS_GLYPH, STATUS_LABEL, dueItems, fmt, isLoggable, packetItems, packetText, resolveMetric,
   signed, shortUnit, systemActions,
 } from '../lib/model'
 import { paths } from '../lib/route'
@@ -261,11 +261,13 @@ export function PacketPanel({ astro, sim }: { astro: Astronaut; sim: Sim }) {
       <div className="panel-head"><h1>Flight surgeon packet</h1></div>
       <p className="muted small">What goes to the ground team. Critical items are always included; you choose the rest by flagging a number.</p>
       <div className={`linkbox ${sim.link}`}>
-        <strong>{sim.link === 'blackout' ? 'Blackout' : `Earth link delayed ${LINK_DELAY_MIN} min`}</strong>
+        <strong>{sim.link === 'blackout' ? profileOf(sim.scenario).link.blackoutText : `Earth link: ${profileOf(sim.scenario).link.delayText.toLowerCase()}`}</strong>
         <span className="small">
           {sim.link === 'blackout'
             ? 'Nothing can be sent. The packet is queued and decisions are logged as autonomous.'
-            : `Sending now arrives after about ${LINK_DELAY_MIN} minutes. You do not need to wait for a reply to act.`}
+            : profileOf(sim.scenario).link.delaySec >= 60
+              ? `Sending now arrives after about ${Math.round(profileOf(sim.scenario).link.delaySec / 60)} minutes. You do not need to wait for a reply to act.`
+              : 'Sending now arrives almost at once. You still do not need to wait for a reply to act.'}
         </span>
       </div>
       {items.length === 0 ? (
@@ -303,7 +305,7 @@ export function PacketPanel({ astro, sim }: { astro: Astronaut; sim: Sim }) {
       )}
       <details className="why">
         <summary>About this packet <OfflineTag /></summary>
-        <p className="small">The packet is assembled by rules from the same numbers you see. Status in it is computed by code, so the flight surgeon can reproduce it. Mission length is about {MISSION_LENGTH} days.</p>
+        <p className="small">The packet is assembled by rules from the same numbers you see. Status in it is computed by code, so the flight surgeon can reproduce it. This phase lasts about {missionLength(sim)} days.</p>
       </details>
     </>
   )

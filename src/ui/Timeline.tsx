@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { ASTRONAUTS } from '../data/astronauts'
-import { MISSION_LENGTH, STATUS_GLYPH, STATUS_LABEL, astronautStatus } from '../lib/model'
+import { missionLength, STATUS_GLYPH, STATUS_LABEL, astronautStatus } from '../lib/model'
 import { paths } from '../lib/route'
 import { useSim, useStore } from '../state/store'
 import type { Astronaut, Sim, Status } from '../types'
 
 const STEP = 10
-export const TIMELINE_DAYS = Array.from({ length: Math.floor((MISSION_LENGTH - 10) / STEP) + 1 }, (_, i) => 10 + i * STEP)
+/** Um marcador a cada 10 dias da fase do cenário (a partir do dia 10; fases curtas, de 1 dia, não têm linha do tempo) */
+export const timelineDays = (length: number) => Array.from({ length: Math.max(0, Math.floor((length - 10) / STEP) + 1) }, (_, i) => 10 + i * STEP)
 
 export interface Course {
   statuses: { day: number; status: Status }[]
@@ -15,8 +16,8 @@ export interface Course {
 }
 
 /** Evolução do status geral do astronauta ao longo da missão, pelo mesmo motor de regras (sem evento solar nem traje). */
-export function courseOf(astro: Astronaut, base: Pick<Sim, 'link' | 'measurements'>): Course {
-  const statuses = TIMELINE_DAYS.map((day) => ({ day, status: astronautStatus(astro, { ...base, day, solar: false, suit: false }) }))
+export function courseOf(astro: Astronaut, base: Pick<Sim, 'link' | 'measurements' | 'scenario'>): Course {
+  const statuses = timelineDays(missionLength(base)).map((day) => ({ day, status: astronautStatus(astro, { ...base, day, solar: false, suit: false }) }))
   return {
     statuses,
     firstWatch: statuses.find((s) => s.status !== 'nominal')?.day ?? null,
@@ -35,7 +36,8 @@ function summary(c: Course): string {
 export function Timeline() {
   const sim = useSim()
   const setDay = useStore((s) => s.setDay)
-  const courses = useMemo(() => ASTRONAUTS.map((a) => ({ a, c: courseOf(a, { link: sim.link, measurements: sim.measurements }) })), [sim.link, sim.measurements])
+  const length = missionLength(sim)
+  const courses = useMemo(() => ASTRONAUTS.map((a) => ({ a, c: courseOf(a, { link: sim.link, measurements: sim.measurements, scenario: sim.scenario }) })), [sim.link, sim.measurements, sim.scenario])
   return (
     <main className="sources timeline">
       <div className="sources-inner">
@@ -72,7 +74,7 @@ export function Timeline() {
                 )
               })}
             </ol>
-            <div className="axis mono small muted" aria-hidden="true"><span>Day 10</span><span>Day {MISSION_LENGTH / 2}</span><span>Day {MISSION_LENGTH}</span></div>
+            <div className="axis mono small muted" aria-hidden="true"><span>Day 10</span><span>Day {length / 2}</span><span>Day {length}</span></div>
           </section>
         ))}
         <a className="btn" href={paths.crew}>Back to crew</a>
