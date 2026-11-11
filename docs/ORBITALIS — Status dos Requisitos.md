@@ -13,7 +13,7 @@ Conferi em 06/11: o typecheck limpo e os 158 testes (13 arquivos; os novos cobre
 | Obrigatórios (RF-01 a RF-15) | 15 | 15 | 0 | 0 |
 | Fortes (RF-16 a RF-22) | 7 | 7 | 0 | 0 |
 | Opcionais (RF-23 a RF-27) | 5 | 5 | 0 | 0 |
-| Propostos (RF-28 a RF-34) | 7 | 2 | 1 | 4 |
+| Propostos (RF-28 a RF-34) | 7 | 3 | 1 | 3 |
 
 Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No escopo original não falta nada: RF-18, os cinco opcionais e a metade de RF-20 que faltava (sem WebGL) entraram em 02/11 (ver as ressalvas na seção 2).
 
@@ -74,7 +74,7 @@ Os sete propostos foram aprovados para avaliação. **A tabela abaixo lista só 
 | --- | --- | --- | --- |
 | RF-30 | CRUD de tripulantes | Baixo | Não iniciado. Eu estimo **Médio**: a tripulação está presa a 4 rostos, 4 posições e 4 estilos de cabelo fixos |
 | RF-31 | CRUD de dados da missão: duração, distância a ser percorrida, riscos… | Baixo | Não iniciado. **Baixo** para a duração; **Médio** se incluir distância e riscos |
-| RF-33 | Adaptabilidade em 4 cenários: foguete, base lunar, estação espacial e espaço sideral | Alto | Não iniciado. Hoje há 1 cenário (cruzeiro a Marte, dia 142 de 250) e 2 modos de exposição. Concordo com **Alto**, mas os 4 não custam o mesmo: estação e espaço sideral são baratos, base lunar é média e foguete quebra o eixo de dias |
+| RF-33 | Adaptabilidade em 4 cenários: foguete, base lunar, estação espacial e espaço sideral | Alto | **Entregue em 06/11 no protótipo** (refeito no mesmo dia pela revisão do dono): três lugares com cenário e postura próprios (foguete com a tripulação deitada de costas na cápsula de pé, estação com o espaço profundo como EVA, base lunar com passos e saltos de 1/6 g) e as transições foguete → estação ou base lunar. Ver "RF-33: o que foi construído". Testes em `data/scenarios.test.ts` e `scene/legPose.test.ts`; conferido por captura em Chrome headless |
 | RF-34 | Personalizar os dados exibidos a cada astronauta, partindo da premissa de que existem seus exames epigenéticos espaciais | A definir (você não informou) | Não iniciado. Eu estimo **Médio**: o desenho é barato porque nada muda no motor, mas exige dados epigenéticos sintéticos por astronauta, uma regra fechada de personalização e testes de invariância. O risco de conformidade é maior que o de código (ver R-N17) |
 
 ### RF-28: catálogo de ações de emergência
@@ -167,6 +167,19 @@ Hoje a tripulação é fixa em `data/astronauts.ts` (4 astronautas; os `override
 **Como construir.** Um `MissionProfile`: duração, gravidade, regime do link, taxa de dose com grandeza e fonte, riscos do HRP, aparelhos e ações disponíveis, fundo da janela. O RF-31 edita esse mesmo perfil e o RF-33 são 4 perfis prontos, então os dois compartilham a base. Na cena, o ganho barato é trocar o fundo da janela (Terra, Lua, Marte), sem modelar um interior novo por cenário.
 
 **Decisões suas:** (1) foguete é a fase de lançamento? (2) o cenário se escolhe no Menu (como o dia e o link) ou na configuração da missão? (3) aceita parâmetros declarados sem fonte, marcados como tais? (4) a adaptação visual fica só no fundo da janela?
+
+### RF-33: o que foi construído (06/11, refeito no mesmo dia)
+
+A primeira versão foi recusada pelo dono: tratava "espaço sideral" como um quarto lugar, mostrava o foguete decolando visto de fora e usava o mesmo interior (a estação) para a estação, a Lua e o espaço profundo, trocando só o fundo. O modelo aprovado:
+
+- **Três lugares**, cada um com cenário e postura próprios: **foguete** (o foguete de pé na plataforma, na Terra, 1 g, e a tripulação deitada de costas e presa nos assentos, numa cabine no formato da Crew Dragon; refeito em 10/11, quando o dono recusou a tripulação sentada como num carro), **estação espacial** (o cenário original, com Marte na janela; o **espaço profundo é a EVA da estação**, flutuando preso pelo cabo) e **base lunar** (cúpula em terra firme, 1/6 g, com caminhada no solo de traje).
+- **Transições:** foguete → estação (missão a Marte) ou foguete → base lunar. Cada lugar começa no dia 1, sem traje e sem evento solar. O Menu → Scenario mostra o que muda e permite saltar direto a qualquer lugar como simulação (`?scenario=`).
+- **Postura:** deitado de costas no foguete (quadril e joelho dobrados no shader e o corpo girado em torno do quadril até o assento, com o clique numa cópia da malha de pernas dobradas e a câmera olhando de cima, de três quartos); passos lentos e saltos em 1/6 g na Lua (parábola com 1,62 m/s², 18 cm, ~0,94 s no ar); de pé na estação, como antes.
+- **Dados por lugar:** dose (fundo natural da Terra ~2,4 mSv/ano pelo UNSCEAR no foguete, 1,8 mSv/dia do RAD na estação, 1,369 mSv/dia de dose equivalente do Chang'E-4 na Lua), gravidade, link, evacuação, traje e avisos nas ações que o lugar não comporta (o catálogo não muda). A barra superior mostra lugar, gravidade e link; o cartão da radiação e o pacote do flight surgeon citam o lugar.
+- **Limites declarados:** a fisiologia sintética é a mesma nos três lugares (não há taxa publicada a 1/6 g; cada lugar reinicia a partir do pré-voo); a postura é desenho e nunca entra no status; a cápsula e a base lunar são procedurais e mais largas que as reais, para caber a formação de quatro; as fontes de dose do Chang'E-4 e do RAD vêm da análise anterior e não foram relidas hoje.
+- **Raio-X:** desligado com o traje de EVA vestido (decisão do dono, 10/11); no foguete ele vale (revisto pelo dono em 11/11), com a anatomia acompanhando o corpo deitado. Testes em `state/store.test.ts`.
+- **Só por dentro (11/11, revisão do dono):** o foguete não mostra mais o lado de fora: a câmera fica dentro da cabine na formação, no foco e no giro livre (`clampInCabin`, testado em `scene/places.test.ts`), com lente mais aberta só ali. As janelas, a escotilha e as luminárias seguem a curva da parede cônica; antes eram peças planas e as bordas atravessavam a parede.
+- **Conferido** por captura em Chrome headless: formação e corpo no foguete por dentro (com regiões abertas, giro livre encostando na parede, janelas e escotilha de perto, e a troca para a estação e para a Lua), base lunar por dentro e por fora com o traje, passos e salto em sequência de quadros, estação. Não testei a 1024 px nem o fluxo de emergência nos lugares novos.
 
 ### RF-34: personalização dos dados pelos exames epigenéticos
 

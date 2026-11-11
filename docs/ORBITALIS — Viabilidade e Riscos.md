@@ -10,7 +10,7 @@ Mantido pela skill `orbitalis-viability` (`/orbitalis-viability`): compara o pro
 
 | Dimensão | Veredito | Por quê |
 | --- | --- | --- |
-| Técnica | **Viável com cortes** (provisório: capacidade não informada) | Os 15 requisitos obrigatórios estão atendidos, o typecheck está limpo, e os 158 testes passam. RF-18, RF-20 e RF-23 a RF-27 entraram em 02/11, e o dono aprovou e fez entrar RF-28 (catálogo de emergência, antes numerado 33) e RF-29 (emergência por regras). O que falta é a entrega (≈ 5,5 dias-pessoa) e os propostos restantes RF-29 (a parte de IA), RF-30, RF-31, RF-32, RF-33 e RF-34 (incluído em 04/11) (≈ 14 dias-pessoa, ou 10,5 sem o cenário foguete). Para 12 dias corridos isso só cabe com mais de uma pessoa ou com cortes |
+| Técnica | **Viável com cortes** (provisório: capacidade não informada) | Os 15 requisitos obrigatórios estão atendidos, o typecheck está limpo, e os 180 testes passam. RF-18, RF-20 e RF-23 a RF-27 entraram em 02/11, e o dono aprovou e fez entrar RF-28 (catálogo de emergência, antes numerado 33) e RF-29 (emergência por regras). O que falta é a entrega (≈ 5,5 dias-pessoa) e os propostos restantes RF-29 (a parte de IA), RF-30, RF-31, RF-32, RF-33 e RF-34 (incluído em 04/11) (≈ 14 dias-pessoa, ou 10,5 sem o cenário foguete). Para 12 dias corridos isso só cabe com mais de uma pessoa ou com cortes |
 | Conformidade | **Em risco** | Dois riscos de severidade alta abertos: R-N01 (o FAQ do Space Apps proíbe começar a trabalhar nos desafios antes do hackathon; o primeiro commit é de 28/10) e R-N04 (a submissão exige a descrição do uso de SI). R-N04 se resolve em meio dia; R-N01 só a organização do evento resolve |
 
 ## 2. Esperado × atual
@@ -22,7 +22,7 @@ Desde 31/10: RF-18 e RF-23 a RF-27 saíram de "não atendido" para atendido (com
 | Obrigatórios (RF-01 a RF-15) | 15 de 15 atendidos |
 | Fortes (RF-16 a RF-22) | 7 de 7 atendidos |
 | Opcionais (RF-23 a RF-27) | 5 de 5 |
-| Propostos (RF-28 a RF-34) | 2 de 7 atendidos (RF-28, RF-32), 1 parcial (RF-29 sem a parte de IA); RF-34 incluído em 04/11, não iniciado |
+| Propostos (RF-28 a RF-34) | 3 de 7 atendidos (RF-28, RF-32, RF-33), 1 parcial (RF-29 sem a parte de IA); RF-34 incluído em 04/11, não iniciado |
 | Critérios de aceite (CLAUDE.md §15) | 11 atendidos, 3 parciais (atribuição no canvas, número sem selo, setas do teclado), 1 pendente (teste dos 10 segundos) |
 | Qualidade | Typecheck limpo; build ok; 158 de 158 testes em 13 arquivos (sem a chamada real ao modelo de IA nem a câmera real); feed do DONKI ao vivo (HTTP 200, 15 flares) |
 | Interface (captura de 31/10) | Nível 1 sem rolagem (702/702) e 8 sistemas na lista |
@@ -53,12 +53,9 @@ Total de entrega: 8 S + 1 M ≈ 5,5 dias-pessoa.
 | RF-29, o que ficou de fora: texto de IA na emergência (sem nomear causa), ficha clínica sintética, registro de sintomas (sem número desde 04/11; o RF-34 passou a ser a personalização epigenética) e o cenário por sobreposição | M | RF-18 já pronto; decisão do dono |
 | RF-30 CRUD de tripulantes mínimo | M | |
 | RF-31 perfil da missão (`MissionProfile`) | M | |
-| RF-33 estação espacial e espaço sideral | M | RF-31 |
-| RF-33 base lunar | M | RF-31; fontes para 1/6 g |
-| RF-33 foguete (fase de lançamento) | L | RF-31; outro eixo de tempo |
 | RF-34 personalização por exames epigenéticos (perfil sintético, notas de contexto no nível 3 e no pacote, testes de invariância do motor) | M | estudos do OSDR com dado epigenético a confirmar; decisões do dono (seção 6); R-N17 |
 
-Total dos propostos que sobraram ≈ 14 dias-pessoa (10,5 sem o foguete). **Ordem de corte sugerida:** RF-34 e RF-30, depois RF-33 foguete e base lunar, depois RF-31. O RF-34 não mexe no motor, mas é o de maior risco de conformidade entre os opcionais (R-N17). O que sobrou do RF-29 reaproveita a camada do RF-18, já pronta, e o motor por regras do RF-28 e RF-29 já existe. Da spec, o que nunca cai: motor determinístico, selos, IDs de requisito, ação por tela e modo autônomo.
+Total dos propostos que sobraram ≈ 9 dias-pessoa (o RF-33 foi entregue em 06/11). **Ordem de corte sugerida:** RF-34 e RF-30, depois RF-31. O RF-34 não mexe no motor, mas é o de maior risco de conformidade entre os opcionais (R-N17). O que sobrou do RF-29 reaproveita a camada do RF-18, já pronta, e o motor por regras do RF-28 e RF-29 já existe. Da spec, o que nunca cai: motor determinístico, selos, IDs de requisito, ação por tela e modo autônomo.
 
 ## 4. Riscos segundo as diretrizes da NASA
 
@@ -105,7 +102,7 @@ Os riscos marcados "condicional" só existem se o requisito proposto corresponde
 2. **A regra 3 vale na emergência?** (diagnóstico × assessment; R-N12). Quem decide: o dono. Adotei por padrão que **vale** (categoria de protocolo, nunca causa) ao implementar RF-28 e RF-29; confirme ou mande reverter.
 3. **Capacidade da equipe** (R-P07). Quem decide: o dono. Destrava o veredito técnico.
 4. **Aprovar ou recusar RF-30 a RF-34** (RF-28 e RF-29 foram aprovados e entregues em 02/11). O número RF-34 que eu havia sugerido para o registro de sintomas ficou com a sua personalização epigenética (04/11); o registro de sintomas segue sem número. Em 02/11 os números 28 e 33 foram trocados: o catálogo de emergência, pré-requisito do RF-29, passou a RF-28, e a adaptabilidade em 4 cenários passou a RF-33.
-5. **Foguete é a fase de lançamento?** (RF-33).
+5. **Foguete é a fase de lançamento?** (RF-33, entregue em 06/11). Decidido pelo dono em 06/11: o foguete é a cápsula na plataforma, com a tripulação sentada e presa; o espaço sideral é a EVA da estação, não um lugar à parte; a base lunar é um cenário próprio em terra firme. Fica em aberto se a fase de subida deve ter indicadores próprios.
 6. **Licença do projeto**: MIT ou Apache 2.0 (R-N03).
 7. **RF-34, escopo da personalização** (R-N17). Quem decide: o dono. Adotei por padrão que o perfil só escolhe e ordena notas de contexto (nunca status, limiar, projeção nem ação), que o exame é pré-voo e sintético, e que a prioridade é a de corte. Confirme, ou diga se a personalização pode reordenar a fila de medições (eu recomendo que não). Detalhes no documento de status.
 
