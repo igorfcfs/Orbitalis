@@ -739,3 +739,197 @@ export function bagTexture() {
   t.anisotropy = 8
   return t
 }
+
+// ---------- Terra e solo lunar (RF-33): procedurais, sem imagem externa ----------
+
+let earth: THREE.CanvasTexture | null = null
+/** Terra: oceano, continentes, gelo nos polos e nuvens, a partir de ruído contínuo na esfera. */
+export function earthTexture() {
+  if (earth) return earth
+  const W = 1024, H = 512
+  const { c, g } = canvas(W, H)
+  const img = g.createImageData(W, H)
+  for (let y = 0; y < H; y++) {
+    const lat = (0.5 - y / H) * Math.PI
+    const cl = Math.cos(lat), sl = Math.sin(lat)
+    for (let x = 0; x < W; x++) {
+      const lon = (x / W) * Math.PI * 2
+      const px = cl * Math.cos(lon), py = sl, pz = cl * Math.sin(lon)
+      const land = fbm(px * 1.9 + 11, py * 1.9 + 4, pz * 1.9 + 7, 6)
+      const shore = land - 0.53
+      let r: number, gg: number, b: number
+      if (shore < 0) {
+        const deep = Math.min(1, -shore * 5)
+        r = 10 + (1 - deep) * 26; gg = 44 + (1 - deep) * 62; b = 98 + (1 - deep) * 64
+      } else {
+        const dry = fbm(px * 3 + 2, py * 3 + 9, pz * 3 + 5, 4)
+        const t = Math.min(1, shore * 5)
+        r = 52 + dry * 120 * t + (1 - t) * 40; gg = 84 + dry * 60 - t * 12; b = 44 + dry * 30
+      }
+      const cloud = Math.max(0, fbm(px * 3.4 + 40, py * 3.4 + 3, pz * 3.4 + 21, 5) - 0.5) * 3.2
+      const ice = Math.min(1, Math.max(0, Math.abs(lat) - 1.18 + (land - 0.5) * 0.3) * 7)
+      const w = Math.min(1, Math.max(cloud * 0.9, ice))
+      r += (244 - r) * w; gg += (246 - gg) * w; b += (250 - b) * w
+      const o = (y * W + x) * 4
+      img.data[o] = r; img.data[o + 1] = gg; img.data[o + 2] = b; img.data[o + 3] = 255
+    }
+  }
+  g.putImageData(img, 0, 0)
+  earth = tex(c)
+  return earth
+}
+
+let regolith: THREE.CanvasTexture | null = null
+/** Solo lunar ladrilhável, para o chão do cenário. */
+export function regolithTexture() {
+  if (regolith) return regolith
+  const S = 512
+  const { c, g } = canvas(S, S)
+  const img = g.createImageData(S, S)
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      // Ruído periódico: as bordas casam, sem costura ao repetir
+      const a = (x / S) * Math.PI * 2, b = (y / S) * Math.PI * 2
+      const n = fbm(Math.cos(a) * 2.2 + 3, Math.sin(a) * 2.2 + Math.cos(b) * 2.2, Math.sin(b) * 2.2 + 1, 6)
+      const L = 70 + n * 110
+      const o = (y * S + x) * 4
+      img.data[o] = L; img.data[o + 1] = L * 0.98; img.data[o + 2] = L * 0.94; img.data[o + 3] = 255
+    }
+  }
+  g.putImageData(img, 0, 0)
+  regolith = tex(c)
+  regolith.wrapS = regolith.wrapT = THREE.RepeatWrapping
+  return regolith
+}
+
+let skyGrad: THREE.CanvasTexture | null = null
+/** Céu do dia visto pelas janelas da cápsula na plataforma: azul no alto, claro e quente no horizonte. */
+export function padSkyTexture() {
+  if (skyGrad) return skyGrad
+  const { c, g } = canvas(8, 512)
+  const grad = g.createLinearGradient(0, 0, 0, 512)
+  grad.addColorStop(0, '#0f2a5c')
+  grad.addColorStop(0.42, '#3f73b8')
+  grad.addColorStop(0.62, '#8fb2d8')
+  grad.addColorStop(0.72, '#f0c9a0')
+  grad.addColorStop(0.74, '#6a6f78')
+  grad.addColorStop(1, '#2b2f36')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 8, 512)
+  skyGrad = tex(c)
+  return skyGrad
+}
+
+let capWall: THREE.CanvasTexture | null = null
+/**
+ * Parede interna da cápsula: painéis de acabamento cinza-claros (como os de uma Crew Dragon), com juntas finas, prendedores,
+ * remendos de velcro e algumas plaquetas pequenas, sem marca nem número. Uma volta da parede = a largura da textura.
+ */
+export function capsuleWallTexture() {
+  if (capWall) return capWall
+  const W = 2048, H = 512
+  const { c, g } = canvas(W, H)
+  const r = rng(31)
+  g.fillStyle = '#c3c7cd'
+  g.fillRect(0, 0, W, H)
+  // Granulação leve do acabamento
+  for (let i = 0; i < 26000; i++) {
+    g.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '60,64,72'},${r() * 0.035})`
+    g.fillRect(r() * W, r() * H, 1 + r() * 2, 1 + r() * 2)
+  }
+  // 16 painéis na volta e 3 faixas na altura, com juntas finas e sombreamento suave na borda
+  const cols = 16
+  const rows = [0, 150, 360, 512]
+  for (let i = 0; i < cols; i++) {
+    const x0 = (i * W) / cols
+    const x1 = ((i + 1) * W) / cols
+    for (let k = 0; k < rows.length - 1; k++) {
+      const y0 = rows[k], y1 = rows[k + 1]
+      const tone = 196 + Math.floor(r() * 10)
+      g.fillStyle = `rgb(${tone - 2},${tone + 1},${tone + 5})`
+      g.fillRect(x0 + 3, y0 + 3, x1 - x0 - 6, y1 - y0 - 6)
+      const grad = g.createLinearGradient(0, y0, 0, y1)
+      grad.addColorStop(0, 'rgba(255,255,255,0.08)')
+      grad.addColorStop(1, 'rgba(0,0,0,0.07)')
+      g.fillStyle = grad
+      g.fillRect(x0 + 3, y0 + 3, x1 - x0 - 6, y1 - y0 - 6)
+      g.strokeStyle = 'rgba(70,76,86,0.55)'
+      g.lineWidth = 2
+      g.strokeRect(x0 + 2, y0 + 2, x1 - x0 - 4, y1 - y0 - 4)
+      // Prendedores nos cantos
+      g.fillStyle = 'rgba(120,126,136,0.9)'
+      for (const [dx, dy] of [[12, 12], [x1 - x0 - 12, 12], [12, y1 - y0 - 12], [x1 - x0 - 12, y1 - y0 - 12]]) {
+        g.beginPath()
+        g.arc(x0 + dx, y0 + dy, 3.2, 0, Math.PI * 2)
+        g.fill()
+      }
+      // Velcro (tiras um pouco mais escuras e foscas) e, às vezes, uma plaqueta pequena
+      if (r() > 0.45) {
+        g.fillStyle = 'rgba(150,154,160,0.7)'
+        g.fillRect(x0 + 20 + r() * 40, y0 + 30 + r() * (y1 - y0 - 80), 38, 14)
+      }
+      if (r() > 0.72) {
+        const px = x0 + 26 + r() * 30, py = y0 + 24 + r() * (y1 - y0 - 70)
+        g.fillStyle = '#e9ecf0'
+        g.fillRect(px, py, 58, 22)
+        g.fillStyle = 'rgba(30,36,48,0.85)'
+        for (let l = 0; l < 3; l++) g.fillRect(px + 6, py + 5 + l * 5, 22 + r() * 24, 2)
+      }
+    }
+  }
+  capWall = tex(c)
+  capWall.wrapS = THREE.RepeatWrapping
+  return capWall
+}
+
+/** Tela de voo da cápsula: fundo escuro, trajetória de subida e barras de sistemas, sem números (como as outras telas). */
+export function flightScreenTexture(kind: 'ascent' | 'systems' | 'nav') {
+  const W = 640, H = 384
+  const { c, g } = canvas(W, H)
+  const r = rng(kind === 'ascent' ? 41 : kind === 'systems' ? 43 : 47)
+  g.fillStyle = '#060b14'
+  g.fillRect(0, 0, W, H)
+  g.fillStyle = '#0d1828'
+  g.fillRect(0, 0, W, 34)
+  g.fillStyle = 'rgba(205,225,250,0.85)'
+  g.font = '600 16px "JetBrains Mono", monospace'
+  g.fillText(kind === 'ascent' ? 'ASCENT' : kind === 'systems' ? 'CABIN' : 'NAV', 18, 23)
+  g.strokeStyle = 'rgba(150,190,240,0.14)'
+  g.lineWidth = 1
+  for (let x = 0; x <= W; x += 40) { g.beginPath(); g.moveTo(x, 34); g.lineTo(x, H); g.stroke() }
+  for (let y = 34; y <= H; y += 40) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke() }
+  g.lineWidth = 3
+  if (kind === 'ascent') {
+    // Curva de subida e o ponto de agora, ainda na plataforma
+    g.strokeStyle = 'rgba(170,210,255,0.55)'
+    g.setLineDash([10, 8])
+    g.beginPath()
+    g.moveTo(40, H - 40)
+    g.bezierCurveTo(140, H - 60, 260, 120, W - 40, 70)
+    g.stroke()
+    g.setLineDash([])
+    g.fillStyle = '#eaf4ff'
+    g.beginPath(); g.arc(40, H - 40, 7, 0, 7); g.fill()
+  } else if (kind === 'systems') {
+    for (let i = 0; i < 6; i++) {
+      const y = 62 + i * 50
+      g.fillStyle = 'rgba(120,140,170,0.35)'
+      g.fillRect(150, y, W - 200, 14)
+      g.fillStyle = '#b9d4f5'
+      g.fillRect(150, y, (W - 200) * (0.45 + r() * 0.5), 14)
+      g.fillStyle = 'rgba(205,225,250,0.75)'
+      g.fillRect(24, y + 2, 90, 9)
+    }
+  } else {
+    // Esfera de atitude simplificada
+    g.save()
+    g.beginPath(); g.arc(W / 2, H / 2 + 16, 130, 0, 7); g.clip()
+    g.fillStyle = '#1d3a63'; g.fillRect(0, 0, W, H / 2 + 16)
+    g.fillStyle = '#3a2c22'; g.fillRect(0, H / 2 + 16, W, H)
+    g.restore()
+    g.strokeStyle = '#eaf4ff'
+    g.beginPath(); g.arc(W / 2, H / 2 + 16, 130, 0, 7); g.stroke()
+    g.beginPath(); g.moveTo(W / 2 - 60, H / 2 + 16); g.lineTo(W / 2 + 60, H / 2 + 16); g.stroke()
+  }
+  return tex(c)
+}

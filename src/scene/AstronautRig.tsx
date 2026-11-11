@@ -17,6 +17,8 @@ import { makeHairShells } from './hairShells'
 import { createTether } from './tether'
 import type { HeadModel } from './headModel'
 import { HEAD_IN_HELMET, fitSuit, type SuitModel } from './suitModel'
+import { LegPoseContext, SEAT_HIP, SEAT_KNEE, ensureLegWeights, legJoints, reclineFrame, seatedPick } from './legPose'
+import type { Posture } from '../data/scenarios'
 
 /**
  * Com o traje fechado o próprio macacão do astronauta (ombros, peito, costas) aparece pelo visor, mas encolhido em torno do
@@ -156,6 +158,48 @@ function makeHeadMaterials(head: HeadModel, u: BodyUniforms, eyeColor: string) {
 const noRaycast = () => {}
 
 /** Semente estável por astronauta e ruído determinístico em [0, 1): cada um pisca, olha e balança em tempos próprios */
+/**
+ * Passos lentos e saltos em 1/6 g, num ciclo de 11 s: um passo com cada perna (a coxa sobe e a canela volta), uma pausa e um
+ * salto pequeno. O salto é uma parábola de verdade com a gravidade lunar (1,62 m/s²): 18 cm de altura ficam 0,94 s no ar,
+ * contra 0,38 s na Terra. Os braços sobem um pouco no ar (`arms`, rad; negativo = para a frente). `crouch` é quanto o quadril desce no agachamento (unidades do atlas), `lift` a altura do salto (m).
+ */
+const G_MOON = 1.62
+const HOP_H = 0.18
+const HOP_V = Math.sqrt(2 * G_MOON * HOP_H)
+const HOP_T = (2 * HOP_V) / G_MOON
+const THIGH = 0.472
+const SHIN = 0.443
+export function lunarGait(t: number) {
+  const tau = ((t % 11) + 11) % 11
+  const out = { hipL: 0, hipR: 0, kneeL: 0, kneeR: 0, lift: 0, crouch: 0, roll: 0, arms: 0 }
+  const step = (a: number) => (a > 0 && a < 1.8 ? Math.sin((Math.PI * a) / 1.8) : 0)
+  const eL = step(tau - 0.5)
+  const eR = step(tau - 2.7)
+  out.hipL = 0.48 * eL
+  out.kneeL = 0.9 * eL
+  out.hipR = 0.48 * eR
+  out.kneeR = 0.9 * eR
+  // O peso passa para a perna de apoio
+  out.roll = 0.018 * (eR - eL)
+  const a = tau - 6.5
+  let c = 0
+  if (a > 0 && a < 0.4) c = Math.sin((Math.PI / 2) * (a / 0.4))
+  else if (a >= 0.4 && a < 0.4 + HOP_T) {
+    const f = a - 0.4
+    out.lift = HOP_V * f - 0.5 * G_MOON * f * f
+    c = Math.max(0, 1 - f / 0.12) * 0.6 + 0.12
+  } else if (a >= 0.4 + HOP_T && a < 0.9 + HOP_T) c = 0.75 * Math.sin((Math.PI * (a - 0.4 - HOP_T)) / 0.5)
+  const ah = 0.38 * c
+  const ak = 0.8 * c
+  out.hipL += ah
+  out.hipR += ah
+  out.kneeL += ak
+  out.kneeR += ak
+  out.crouch = THIGH * (1 - Math.cos(ah)) + SHIN * (1 - Math.cos(ak - ah))
+  out.arms = -1.1 * out.lift - 0.08 * c
+  return out
+}
+
 function seedOf(id: string) {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 997
@@ -316,6 +360,8 @@ export interface RigProps {
   suit: boolean
   /** Fora do casco, no vácuo: só aqui o astronauta flutua e o cabo de segurança aparece (dentro da estação os pés ficam no piso) */
   space: boolean
+  /** Postura do lugar (RF-33): deitado de costas no assento da cápsula, de pé na estação ou de pé em 1/6 g na Lua */
+  posture: Posture
   xray: boolean
   /** Dissolução geral (0 = presente, 1 = ausente) */
   fadeTarget: number
@@ -365,6 +411,8 @@ export function AstronautRig(p: RigProps) {
     if (p.head) mats.skin.color.copy(p.head.avgSkin).multiplyScalar(1.04)
   }, [p.head, mats])
   const group = useRef<THREE.Group>(null)
+  /** Deita o corpo de costas no assento do foguete (gira em torno do quadril) */
+  const recline = useRef<THREE.Group>(null)
   const ghost = useRef<THREE.Group>(null)
   const coverMesh = useRef<THREE.Mesh>(null)
   const collarMesh = useRef<THREE.Mesh>(null)
@@ -400,6 +448,7 @@ export function AstronautRig(p: RigProps) {
     suit: p.suit ? 1 : 0, sel: 0, reveal: 0, xray: 0, fade: p.fadeTarget, turn: 0, hoverScale: 1,
     // vida: cabeça (giro e inclinação), olhar, piscar e troca de peso
     yaw: 0, pitch: 0, gx: 0, gv: 0, blinkT: -1, nextBlink: 1.5, shift: 0, space: 0, tether: 0,
+    seat: p.posture === 'supine' ? 1 : 0, lunar: p.posture === 'lunar' ? 1 : 0,
   })
   // Cabo de segurança: corda simulada entre um ponto do cinto do traje e o casco
   const tether = useMemo(() => createTether(new THREE.MeshStandardMaterial({ color: '#d9dfec', roughness: 0.55, transparent: true, opacity: 0 })), [])
@@ -407,11 +456,24 @@ export function AstronautRig(p: RigProps) {
   const tetherAnchor = useRef<THREE.Object3D>(null)
   const seed = useMemo(() => seedOf(astro.id), [astro.id])
   const pickRef = useRef<THREE.Mesh>(null)
+  // Pernas: pesos por vértice (uma vez por geometria) e as juntas deste corpo
+  useMemo(() => {
+    for (const g of [variant.skin, variant.cover, variant.suit, variant.pick]) ensureLegWeights(g, look.build)
+  }, [variant, look.build])
+  const hipJ = useMemo(() => legJoints(look.build).hip, [look.build])
+  useEffect(() => {
+    const j = legJoints(look.build)
+    u.uHipJ.value.copy(j.hip)
+    u.uKneeJ.value.copy(j.knee)
+  }, [u, look.build])
+  // Deitado no assento, o clique vai para uma cópia da malha invisível com as pernas já dobradas (o giro do corpo vem do grupo)
+  const seated = p.posture === 'supine'
+  const pickGeo = useMemo(() => (seated ? seatedPick(variant.pick, look.build) : variant.pick), [seated, variant, look.build])
 
   // BVH para o clique por região
   useLayoutEffect(() => {
-    bvhFor(variant.pick)
-  }, [variant])
+    bvhFor(pickGeo)
+  }, [pickGeo])
 
   // Status → uniformes
   useEffect(() => {
@@ -459,7 +521,7 @@ export function AstronautRig(p: RigProps) {
       const local = pickRef.current.worldToLocal(e.point.clone())
       if (local.z > 0.03 && eyes.some((c) => Math.hypot(local.x - c.x, local.y - c.y) < 0.024)) return 'neuro_ocular'
     }
-    const geo = variant.pick
+    const geo = pickGeo
     const v = geo.index!.getX(fi * 3)
     return SYS_BY_INDEX[Math.round((geo.getAttribute('aSys') as THREE.BufferAttribute).getX(v))]
   }
@@ -703,39 +765,62 @@ export function AstronautRig(p: RigProps) {
       // sobem à frente (ângulo negativo = braço para cima) e derivam, e as pernas pendem soltas e se abrem.
       st.space += ((p.space && p.suit && suitFit ? 1 : 0) - st.space) * k(1.1)
       const fl = st.space * live
+      // Postura do lugar: deitado de costas no assento (foguete) ou os passos lentos e saltos de 1/6 g (Lua). Com o raio-X ou
+      // uma região aberta, a pose deitada fica (a anatomia gira junto) e o passo lunar para.
+      // A troca de lugar acontece por trás do véu: a postura muda de uma vez, sem o corpo levantar ou deitar na frente do usuário
+      st.seat = p.posture === 'supine' ? 1 : 0
+      st.lunar = p.posture === 'lunar' ? 1 : 0
+      const gait = lunarGait(t + seed * 3.1)
+      const lw = st.lunar * live
+      const sitH = SEAT_HIP * st.seat
+      const sitK = SEAT_KNEE * st.seat
+      u.uLegPose.value.set(sitH + lw * gait.hipL, sitH + lw * gait.hipR, sitK + lw * gait.kneeL, sitK + lw * gait.kneeR)
+      const lunarArms = lw * gait.arms
       const sw = (o: number) =>
         (0.03 * Math.sin(t * 0.71 + seed + o) + 0.014 * Math.sin(t * 1.9 + seed * 1.3 + o * 2) + 0.018 * u.uBreath.value + 0.02 * st.shift) * live +
         fl * (-0.16 + 0.14 * Math.sin(t * 0.43 + seed + o) + 0.06 * Math.sin(t * 0.97 + seed * 2 + o))
-      u.uSway.value.set(sw(0), sw(2.4))
+      const lie = 1 - 0.85 * st.seat
+      u.uSway.value.set(sw(0) * lie, sw(2.4) * lie)
+      if (lunarArms) u.uSway.value.addScalar(lunarArms)
       u.uLegs.value.set(
-        fl * (0.1 + 0.11 * Math.sin(t * 0.39 + seed * 1.1) + 0.04 * Math.sin(t * 0.88 + seed)),
-        fl * (0.1 + 0.11 * Math.sin(t * 0.39 + seed * 1.1 + 2.1) + 0.04 * Math.sin(t * 0.88 + seed + 1.3)),
+        fl * (0.1 + 0.11 * Math.sin(t * 0.39 + seed * 1.1) + 0.04 * Math.sin(t * 0.88 + seed)) - lw * gait.hipL,
+        fl * (0.1 + 0.11 * Math.sin(t * 0.39 + seed * 1.1 + 2.1) + 0.04 * Math.sin(t * 0.88 + seed + 1.3)) - lw * gait.hipR,
         0,
       )
       // Cada perna se abre para o lado e dobra o joelho no seu próprio ritmo (como a pose relaxada de quem flutua)
       u.uLegs2.value.set(
         fl * (0.14 + 0.12 * Math.sin(t * 0.33 + seed * 0.9)),
         fl * (0.14 + 0.12 * Math.sin(t * 0.33 + seed * 0.9 + 2.4)),
-        fl * (0.22 + 0.2 * Math.sin(t * 0.47 + seed * 1.4 + 1)),
-        fl * (0.22 + 0.2 * Math.sin(t * 0.47 + seed * 1.4 + 3.3)),
+        fl * (0.22 + 0.2 * Math.sin(t * 0.47 + seed * 1.4 + 1)) + lw * gait.kneeL,
+        fl * (0.22 + 0.2 * Math.sin(t * 0.47 + seed * 1.4 + 3.3)) + lw * gait.kneeR,
       )
       group.current.visible = st.fade < 0.98
       // Na formação o corpo acompanha o cursor; em foco, parado (quem gira é a câmera)
-      const target = p.lineup ? -pointer.x * 0.18 : 0
+      // Deitado, o corpo não gira no assento
+      const target = p.lineup ? -pointer.x * 0.18 * (1 - st.seat) : 0
       st.turn += (target - st.turn) * k(3)
       group.current.rotation.x = fl * (0.09 * Math.sin(t * 0.27 + seed) + 0.03 * Math.sin(t * 0.71 + seed * 2))
-      group.current.rotation.y = (still ? 0 : st.turn + Math.sin(t * 0.35 + x) * 0.025) + fl * 0.16 * Math.sin(t * 0.17 + seed)
-      group.current.rotation.z = still ? 0 : Math.sin(t * 0.41 + x * 1.3) * 0.0045 + 0.012 * st.shift * live + fl * 0.07 * Math.sin(t * 0.21 + seed * 1.3)
+      group.current.rotation.y = (still ? 0 : st.turn + Math.sin(t * 0.35 + x) * 0.025 * (1 - st.seat)) + fl * 0.16 * Math.sin(t * 0.17 + seed)
+      group.current.rotation.z = (still ? 0 : Math.sin(t * 0.41 + x * 1.3) * 0.0045 + 0.012 * st.shift * live * (1 - st.seat) + fl * 0.07 * Math.sin(t * 0.21 + seed * 1.3)) + lw * gait.roll
       // Pés plantados no piso na baia (o balanço de peso gira o corpo em torno dos pés); em microgravidade a rotação é em torno da
       // cintura e o corpo sobe e deriva, como se estivesse preso só pelo cabo
       bodyE.copy(group.current.rotation)
       tmpV.set(0, 0.95, 0).applyEuler(bodyE)
       const c = Math.min(1, fl * 8)
+      // Na Lua o corpo sobe no salto (m) e desce no agachamento
+      const unit = NORM_SCALE * p.heightScale
       group.current.position.set(
         x + fl * 0.05 * Math.sin(t * 0.23 + seed * 1.7) - c * tmpV.x,
-        fl * (0.02 + 0.07 * Math.sin(t * 0.37 + seed) + 0.03 * Math.sin(t * 0.93 + seed * 2)) + c * (0.95 - tmpV.y),
+        fl * (0.02 + 0.07 * Math.sin(t * 0.37 + seed) + 0.03 * Math.sin(t * 0.93 + seed * 2)) + c * (0.95 - tmpV.y)
+          + lw * (gait.lift - gait.crouch * unit),
         fl * 0.04 * Math.sin(t * 0.19 + seed * 0.6) - c * tmpV.z,
       )
+      // No foguete o corpo inteiro deita de costas, girando em torno do quadril até o ponto do assento
+      if (recline.current) {
+        const rf = reclineFrame(st.seat, hipJ.y * unit, hipJ.z * NORM_SCALE * p.widthScale)
+        recline.current.rotation.x = rf.rotX
+        recline.current.position.set(0, rf.y, rf.z)
+      }
       // O cabo acompanha o cinto do traje, já na posição deste quadro
       // O cabo só existe com o traje vestido no vácuo: ao tirar o traje (ou na baia) ele some primeiro, num esmaecer rápido, sem
       // esperar a flutuação terminar de assentar
@@ -763,12 +848,13 @@ export function AstronautRig(p: RigProps) {
 
   return (
     <>
+    <group ref={recline}>
     <group ref={group} dispose={null}>
       <group scale={NORM_SCALE}>
         {/* Clique por região: corpo inteiro, invisível */}
         <mesh
           ref={pickRef}
-          geometry={variant.pick}
+          geometry={pickGeo}
           userData={{ body: true }}
           onPointerMove={onBodyMove}
           onPointerOut={onBodyOut}
@@ -821,7 +907,7 @@ export function AstronautRig(p: RigProps) {
         )}
 
         <CoverAccessories mats={mats} build={look.build} surfaceZ={surfaceZ} onRadiation={radiation} />
-        {p.children}
+        <LegPoseContext.Provider value={u.uLegPose}>{p.children}</LegPoseContext.Provider>
       </group>
 
       {/* Traje de EVA (Z-2, NASA): fora do grupo do corpo, em metros, pés no chão */}
@@ -859,6 +945,7 @@ export function AstronautRig(p: RigProps) {
       <object3D ref={headAnchor} position={[0, 2.0, 0]} />
       {/* Ponto do cinto onde o cabo prende (m, no espaço do traje) */}
       <object3D ref={tetherAnchor} position={[0.16, 1.04, -0.22]} />
+    </group>
     </group>
     <primitive object={tether.mesh} />
     </>

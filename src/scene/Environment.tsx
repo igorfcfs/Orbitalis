@@ -3,7 +3,7 @@ import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { tex } from './assets'
-import { bagTexture, crinkleBump, deckTextures, glowTexture, hullTexture, noiseBump, rackAtlas, screenTexture, solarTexture, starTexture } from './textures'
+import { bagTexture, crinkleBump, deckTextures, earthTexture, glowTexture, hullTexture, noiseBump, rackAtlas, screenTexture, solarTexture, starTexture } from './textures'
 
 /**
  * Cenário: a baia médica de um módulo da nave (racks, dutos, luminárias, escotilha, telas)
@@ -59,7 +59,7 @@ const planetVertex = /* glsl */ `
     gl_Position = projectionMatrix * mv;
   }`
 const planetFragment = /* glsl */ `
-  uniform sampler2D uMap; uniform vec3 uLight; uniform float uDim;
+  uniform sampler2D uMap; uniform vec3 uLight; uniform float uDim; uniform vec3 uRim;
   varying vec3 vNW; varying vec3 vV; varying vec2 vUv;
   void main(){
     vec3 N = normalize(vNW);
@@ -71,19 +71,21 @@ const planetFragment = /* glsl */ `
     // Só o escurecimento do limbo: o disco tem borda nítida, sem halo
     float limb = mix(0.74, 1.0, pow(ndv, 0.42));
     vec3 col = alb * (0.012 + 1.55 * day) * limb;
+    // Atmosfera fina na borda do lado iluminado (só a Terra; Marte e a Lua não têm)
+    col += uRim * pow(1.0 - ndv, 3.0) * smoothstep(-0.2, 0.5, ndl);
     gl_FragColor = vec4(col * uDim, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }`
-export function Mars({ position, radius, light, scan }: { position: [number, number, number]; radius: number; light: THREE.Vector3; scan: Scan }) {
-  const map = useMemo(() => tex('mars', { srgb: true, anisotropy: 16 }), [])
+/** Globo com terminador e escurecimento do limbo: Marte, a Terra e a Lua usam o mesmo sombreamento. */
+export function Globe({ map, position, radius, light, scan, rim }: { map: THREE.Texture; position: [number, number, number]; radius: number; light: THREE.Vector3; scan: Scan; rim?: THREE.Color }) {
   const ref = useRef<THREE.Mesh>(null)
   const mats = useMemo(() => {
     const L = light.clone().normalize()
     return {
-      body: new THREE.ShaderMaterial({ uniforms: { uMap: { value: map }, uLight: { value: L }, uDim: { value: 1 } }, vertexShader: planetVertex, fragmentShader: planetFragment }),
+      body: new THREE.ShaderMaterial({ uniforms: { uMap: { value: map }, uLight: { value: L }, uDim: { value: 1 }, uRim: { value: rim ?? new THREE.Color(0, 0, 0) } }, vertexShader: planetVertex, fragmentShader: planetFragment }),
     }
-  }, [map, light])
+  }, [map, light, rim])
   useFrame((_, dt) => {
     if (ref.current && !stillMotion()) ref.current.rotation.y += dt * 0.008
     const d = 1 - 0.62 * scan.current
@@ -96,6 +98,18 @@ export function Mars({ position, radius, light, scan }: { position: [number, num
       </mesh>
     </group>
   )
+}
+
+export function Mars(p: { position: [number, number, number]; radius: number; light: THREE.Vector3; scan: Scan }) {
+  const map = useMemo(() => tex('mars', { srgb: true, anisotropy: 16 }), [])
+  return <Globe map={map} {...p} />
+}
+
+const EARTH_RIM = new THREE.Color(0.18, 0.42, 0.95)
+/** A Terra vista da Lua, com atmosfera na borda. */
+export function BlueEarth(p: { position: [number, number, number]; radius: number; light: THREE.Vector3; scan: Scan }) {
+  const map = useMemo(() => earthTexture(), [])
+  return <Globe map={map} rim={EARTH_RIM} {...p} />
 }
 
 export function Earth({ position, scale }: { position: [number, number, number]; scale: number }) {

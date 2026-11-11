@@ -17,12 +17,17 @@ import { loadEnvironment } from './assets'
 import { getVariant, type BodyVariant } from './bodyBuild'
 import { loadHead, type HeadModel } from './headModel'
 import { loadSuit, type SuitModel } from './suitModel'
+import { SCENARIOS, type ScenarioId } from '../data/scenarios'
 import { Earth, EvaWorld, Habitat, Mars, SceneLights, Stars, Sun, WINDOW, type Scan } from './Environment'
+import { CapsuleInterior, CrewSeat, LunarBase, LunarOutside, PlaceLights, clampInCabin } from './Places'
+import { supinePoint } from './legPose'
 import { RadiationParticles } from './Particles'
 
 type V3 = [number, number, number]
 
 const LINEUP_X: Record<string, number> = { lena: -1.95, rafael: -0.65, aiko: 0.65, daniel: 1.95 }
+/** Na cápsula os quatro assentos ficam lado a lado, mais juntos (como na Crew Dragon) */
+const CAPSULE_X: Record<string, number> = { lena: -1.2, rafael: -0.4, aiko: 0.4, daniel: 1.2 }
 /** Painel de detalhe à direita e lista de sistemas à esquerda, com as margens (--panel-w e --rail-w em styles.css) */
 const PANEL_PX = 464
 const RAIL_PX = 256
@@ -31,21 +36,46 @@ const RAIL_PX = 256
 
 const UP = new THREE.Vector3(0, 1, 0)
 /** Alvo e estado da órbita livre, compartilhados com o CameraRig. */
-const ORBIT = { target: new THREE.Vector3(0, 1.2, 0), enabled: true }
+const ORBIT = { target: new THREE.Vector3(0, 1.2, 0), enabled: true, cabin: false }
 const tmpA = new THREE.Vector3()
 const tmpB = new THREE.Vector3()
 const tmpC = new THREE.Vector3()
 
-function CameraRig({ lineup, selected, xray, suit }: { lineup: boolean; selected: SystemId | null; xray: boolean; suit: boolean }) {
+/**
+ * No foguete a cena é vista só de dentro da cabine (a câmera nunca sai dela: `clampInCabin`). Na formação, a câmera fica no
+ * alto, perto do teto, acima do painel de voo e do lado dos pés e da direita, e olha de três quartos para a fileira deitada
+ * (tronco na horizontal, joelhos para cima, rostos à vista). De frente e de cima a tripulação parecia sentada de novo.
+ */
+const CABIN_EYE = new THREE.Vector3(0.6, 2.84, 0.95)
+const CABIN_LOOK = new THREE.Vector3(-0.05, 1.0, -0.5)
+/** Lente da cabine: mais aberta que a do resto do app (32°), porque não há distância para recuar dentro da nave */
+const BASE_FOV = 32
+const CABIN_FOV = 52
+/** Meia largura da fileira deitada (m), para a lente abrir em telas mais estreitas */
+const CABIN_HALF_W = 1.62
+/** Ao abrir um astronauta deitado: de cima, de três quartos, para o tronco e as pernas dobradas aparecerem */
+const SUPINE_FRONT = new THREE.Vector3(0.42, 0.78, 0.46).normalize()
+const FRONT = new THREE.Vector3(0, 0.12, 1).normalize()
+
+function CameraRig({ lineup, selected, xray, suit, supine, cabin }: { lineup: boolean; selected: SystemId | null; xray: boolean; suit: boolean; supine: boolean; cabin: boolean }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
   const controls = ORBIT
   const size = useThree((s) => s.size)
   const timer = useRef(0)
   const shift = useRef({ x: 0, y: 0 })
-  const key = `${lineup}-${selected}-${xray}-${suit}`
+  const key = `${lineup}-${selected}-${xray}-${suit}-${supine}`
   useEffect(() => {
     timer.current = 0
   }, [key])
+  // Troca de lugar (por trás do véu): a câmera pula para o lugar novo em vez de atravessar a parede da cabine
+  const snap = useRef(true)
+  useEffect(() => {
+    snap.current = true
+    ORBIT.cabin = cabin
+    return () => {
+      ORBIT.cabin = false
+    }
+  }, [cabin])
 
   useFrame(({ pointer }, dt) => {
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -60,7 +90,34 @@ function CameraRig({ lineup, selected, xray, suit }: { lineup: boolean; selected
     camera.setViewOffset(size.width, size.height, shift.current.x, shift.current.y, size.width, size.height)
 
     controls.enabled = !lineup
-    const k = still ? 1 : 1 - Math.exp(-dt * (lineup ? 2.2 : 3.2))
+    const jump = snap.current
+    snap.current = false
+    const k = still || jump ? 1 : 1 - Math.exp(-dt * (lineup ? 2.2 : 3.2))
+    // Lente: na cabine abre o bastante para a fileira inteira caber na largura da tela
+    const aspect = size.width / size.height
+    let fov = BASE_FOV
+    if (cabin) {
+      const d = CABIN_EYE.distanceTo(CABIN_LOOK)
+      const need = (2 * Math.atan(CABIN_HALF_W / (d * aspect)) * 180) / Math.PI
+      fov = lineup ? THREE.MathUtils.clamp(need, CABIN_FOV - 6, 72) : CABIN_FOV
+    }
+    if (Math.abs(camera.fov - fov) > 0.01) {
+      camera.fov += (fov - camera.fov) * k
+      camera.updateProjectionMatrix()
+    }
+    if (lineup && cabin) {
+      tmpB.copy(CABIN_LOOK)
+      tmpB.x += pointer.x * 0.06
+      tmpA.copy(CABIN_EYE)
+      tmpA.x += pointer.x * 0.1
+      tmpA.z += pointer.y * 0.05
+      camera.position.lerp(tmpA, k)
+      clampInCabin(camera.position)
+      controls.target.lerp(tmpB, k)
+      camera.up.lerp(UP, k).normalize()
+      camera.lookAt(controls.target)
+      return
+    }
     if (lineup) {
       const aspect = size.width / size.height
       const dist = Math.max(5.9, 2.7 / (Math.tan((camera.fov * Math.PI) / 360) * aspect))
@@ -72,18 +129,28 @@ function CameraRig({ lineup, selected, xray, suit }: { lineup: boolean; selected
       camera.lookAt(controls.target)
       return
     }
-    if (timer.current > 2.4) return
+    if (timer.current > 2.4 && !jump) return
     timer.current += dt
     // No raio-X sem sistema aberto o corpo chega mais perto, para os detalhes internos aparecerem
     const f = selected ? SYSTEMS[selected].focus : { target: [0, 0.98, 0] as V3, distance: xray ? 3.4 : suit ? 4.5 : 4.0 }
+    // Deitado no assento, o alvo da região gira com o corpo (as pernas dobradas, o tronco na horizontal)
     tmpB.set(f.target[0], f.target[1], f.target[2])
+    if (supine) supinePoint(tmpB.clone(), undefined, tmpB)
     controls.target.lerp(tmpB, k)
     tmpC.copy(camera.position).sub(controls.target)
     if (tmpC.lengthSq() < 0.01) tmpC.set(0, 0.1, 1)
     tmpC.normalize()
-    // Ao voltar do lineup, olha de frente
-    if (timer.current < 0.05) tmpC.lerp(new THREE.Vector3(0, 0.12, 1).normalize(), 0.5).normalize()
-    tmpA.copy(controls.target).addScaledVector(tmpC, f.distance * (wide ? 1 : 1.6))
+    // Ao voltar do lineup, olha de frente (deitado, de cima)
+    // Num lugar novo (por trás do véu) começa do ângulo padrão dele: o ângulo do lugar anterior não serve (da cabine, de cima)
+    if (jump) tmpC.copy(supine ? SUPINE_FRONT : FRONT)
+    else if (timer.current < 0.05) tmpC.lerp(supine ? SUPINE_FRONT : FRONT, 0.5).normalize()
+    // Deitado, de baixo só se veem os pés e o apoio deles: enquanto mira, a câmera sobe até olhar de cima (vale também ao abrir
+    // o astronauta direto pelo link, sem passar pela formação)
+    if (supine && tmpC.y < 0.6) tmpC.lerp(SUPINE_FRONT, Math.min(1, k * 2)).normalize()
+    // Na cabine a lente é mais aberta: a mesma moldura sai de mais perto
+    const lens = cabin ? Math.tan((BASE_FOV * Math.PI) / 360) / Math.tan((CABIN_FOV * Math.PI) / 360) : 1
+    tmpA.copy(controls.target).addScaledVector(tmpC, f.distance * lens * (wide ? 1 : 1.6))
+    if (cabin) clampInCabin(tmpA)
     camera.position.lerp(tmpA, k)
     camera.lookAt(controls.target)
   })
@@ -106,6 +173,8 @@ function FreeOrbit() {
     sph.current.phi = Math.min(Math.PI * 0.55, Math.max(Math.PI * 0.1, sph.current.phi - v))
     off.current.setFromSpherical(sph.current)
     camera.position.copy(ORBIT.target).add(off.current)
+    // No foguete a câmera não sai da cabine: encostou na parede ou no teto, chega mais perto do corpo
+    if (ORBIT.cabin) clampInCabin(camera.position)
     camera.lookAt(ORBIT.target)
   }
   useEffect(() => {
@@ -139,6 +208,7 @@ function FreeOrbit() {
       off.current.copy(camera.position).sub(ORBIT.target)
       const d = Math.min(7, Math.max(0.55, off.current.length() * Math.exp(e.deltaY * 0.0006)))
       camera.position.copy(ORBIT.target).addScaledVector(off.current.normalize(), d)
+      if (ORBIT.cabin) clampInCabin(camera.position)
     }
     el.addEventListener('pointerdown', down)
     window.addEventListener('pointermove', move)
@@ -219,9 +289,11 @@ interface WorldProps {
   suitModel: SuitModel | null
   headModels: Record<string, HeadModel>
   env: 'hab' | 'eva'
+  /** Cenário desenhado agora: acompanha o do estado com atraso, para a transição (decolagem, véu) acontecer na cena */
+  view: ScenarioId
 }
 
-function World({ route, sim, variants, suitModel, headModels, env }: WorldProps) {
+function World({ route, sim, variants, suitModel, headModels, env, view }: WorldProps) {
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
   const hoverSys = useStore((s) => s.hoverSys)
@@ -233,7 +305,7 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
   const setHoverSys = useStore((s) => s.setHoverSys)
   const setHoverCrew = useStore((s) => s.setHoverCrew)
   const heads = useRef(new Map<string, THREE.Object3D>())
-  const xs = useRef<Record<string, number>>({ ...LINEUP_X })
+  const xs = useRef<Record<string, number>>({ ...(SCENARIOS[view].world === 'capsule' ? CAPSULE_X : LINEUP_X) })
   const lineup = route.level === 0
   const focusedId = route.level > 0 && 'id' in route ? route.id : null
   const selected = 'system' in route ? route.system : null
@@ -262,6 +334,12 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
   useEffect(() => {
     scene.environmentRotation.y = env === 'eva' ? 0.6 : -0.35
   }, [env, scene])
+  const scn = SCENARIOS[view]
+  const place = scn.world
+  // A fileira muda de espaçamento com o lugar: por trás do véu, de uma vez
+  useEffect(() => {
+    xs.current = { ...(place === 'capsule' ? CAPSULE_X : LINEUP_X) }
+  }, [place])
 
   // Modo de varredura: com o raio-X ligado a sala escurece (luzes, ambiente, Marte e céu) e a anatomia aparece
   const scan = useRef(0) as Scan
@@ -288,13 +366,14 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
 
   useFrame((_, dt) => {
     const k = 1 - Math.exp(-dt * 3.2)
+    const row = place === 'capsule' ? CAPSULE_X : LINEUP_X
     for (const a of ASTRONAUTS) {
-      const target = lineup || a.id !== focusedId ? LINEUP_X[a.id] : 0
+      const target = lineup || a.id !== focusedId ? row[a.id] : 0
       xs.current[a.id] += (target - xs.current[a.id]) * k
     }
     scan.current += ((xray && !lineup ? 1 : 0) - scan.current) * (1 - Math.exp(-dt * 3))
     const d = 1 - 0.55 * scan.current
-    scene.environmentIntensity = (env === 'eva' ? 0.5 : 0.85) * d
+    scene.environmentIntensity = (place === 'capsule' ? 0.55 : place === 'lunar' && env !== 'eva' ? 0.6 : env === 'eva' ? 0.5 : 0.85) * d
     for (const l of lights.current?.children ?? []) (l as THREE.Light).intensity = (l.userData.base as number) * d
   })
 
@@ -314,10 +393,16 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
 
   return (
     <>
-      <SceneLights eva={eva} group={lights} />
-      <Stars scan={scan} />
-      {eva ? (
+      {place === 'capsule' || place === 'lunar' ? <PlaceLights place={place} group={lights} /> : <SceneLights eva={eva} group={lights} />}
+      {/* Na Terra, dentro da cápsula, não há céu estrelado: as janelas mostram o céu do dia */}
+      {place !== 'capsule' && <Stars scan={scan} />}
+      {place === 'capsule' ? (
+        <CapsuleInterior panel={lineup} />
+      ) : place === 'lunar' ? (
+        eva ? <LunarOutside scan={scan} /> : <LunarBase scan={scan} />
+      ) : eva ? (
         <>
+          {/* Espaço profundo: fora da estação, preso pelo cabo */}
           <Mars position={[16, -7, -40]} radius={11 * marsScale} light={sunEva} scan={scan} />
           <Sun position={[40, 26, -14]} scale={42} />
           <Earth position={[-20, 22, -60]} scale={earthScale * 1.4} />
@@ -336,8 +421,8 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
         const variant = variants[a.look.build]
         return (
           <group key={a.id}>
-            <FollowX xs={xs} id={a.id} hidden={(!lineup && !isFocus) || (!lineup && eva && sim.suit)}>
-              <Halo status={overall} active={isFocus} hot={hoverCrew === a.id} />
+            <FollowX xs={xs} id={a.id} hidden={(!lineup && !isFocus) || (!lineup && eva && sim.suit && scn.eva.tethered)}>
+              {place === 'capsule' ? <CrewSeat /> : <Halo status={overall} active={isFocus} hot={hoverCrew === a.id} />}
             </FollowX>
             <AstronautRig
               astro={a}
@@ -347,7 +432,8 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
               selected={isFocus ? selected : null}
               hoverSys={isFocus ? railSys ?? hoverSys : null}
               suit={isFocus && sim.suit}
-              space={isFocus && eva}
+              space={isFocus && eva && scn.eva.tethered}
+              posture={scn.posture}
               xray={isFocus && xray}
               fadeTarget={lineup || isFocus ? 0 : 1}
               focused={isFocus}
@@ -378,7 +464,7 @@ function World({ route, sim, variants, suitModel, headModels, env }: WorldProps)
         active={!lineup}
       />
       <Projector heads={heads} active={lineup} />
-      <CameraRig lineup={lineup} selected={selected} xray={xray && !lineup} suit={sim.suit && !lineup} />
+      <CameraRig lineup={lineup} selected={selected} xray={xray && !lineup} suit={sim.suit && !lineup} supine={scn.posture === 'supine'} cabin={place === 'capsule'} />
       <FreeOrbit />
       <EffectComposer multisampling={0}>
         <Focus />
@@ -475,6 +561,8 @@ function StageImpl({ route }: { route: Route }) {
   const [veil, setVeil] = useState(0)
   const suit = sim.suit
   const first = useRef(true)
+  const scenario: ScenarioId = sim.scenario ?? 'station'
+  const [shown, setShown] = useState<ScenarioId>(scenario)
 
   // Ciclo da câmara de ar: o traje se forma, a imagem escurece, a cena troca
   useEffect(() => {
@@ -501,6 +589,19 @@ function StageImpl({ route }: { route: Route }) {
     return () => clearTimeout(c)
   }, [suit])
 
+  // Transição entre lugares (foguete → estação ou base lunar): a imagem escurece, o lugar e a postura trocam por trás do véu
+  // e a imagem volta. Os dados do painel já são os do lugar novo.
+  useEffect(() => {
+    if (scenario === shown) return
+    setVeil(1)
+    const b = setTimeout(() => {
+      setShown(scenario)
+      setEnv('hab')
+      setVeil(0)
+    }, 650)
+    return () => clearTimeout(b)
+  }, [scenario, shown])
+
   return (
     <div className="stage3d" aria-hidden={false}>
       <Canvas
@@ -510,7 +611,7 @@ function StageImpl({ route }: { route: Route }) {
         onPointerMissed={() => useStore.getState().setHoverSys(null)}
       >
         <color attach="background" args={['#02030a']} />
-        {variants && headsDone && <World route={route} sim={sim} variants={variants} suitModel={suitModel} headModels={heads} env={env} />}
+        {variants && headsDone && <World route={route} sim={sim} variants={variants} suitModel={suitModel} headModels={heads} env={env} view={shown} />}
       </Canvas>
       <div className="veil" style={{ opacity: veil }} />
       {!(variants && headsDone) && !error && <p className="boot" role="status">Preparing the crew bay…</p>}
