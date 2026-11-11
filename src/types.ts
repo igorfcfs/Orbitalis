@@ -1,3 +1,5 @@
+import type { ScenarioId } from './data/scenarios'
+
 export type Status = 'nominal' | 'watch' | 'critical'
 
 export type SystemId =
@@ -168,6 +170,8 @@ export interface Sim {
   suit: boolean
   link: 'delayed' | 'blackout'
   measurements: Measurement[]
+  /** Cenário da missão (RF-33); sem ele vale o cruzeiro a Marte, o padrão do projeto */
+  scenario?: ScenarioId
 }
 
 export interface Point {

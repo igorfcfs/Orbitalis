@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { ATLAS_LAYERS, DEFAULT_LAYERS, useStore } from './store'
+import { ATLAS_LAYERS, DEFAULT_LAYERS, useStore, xrayAllowed } from './store'
 
 const st = () => useStore.getState()
 
 describe('raio-X e camadas do atlas', () => {
-  beforeEach(() => useStore.setState({ xray: false, layers: [], hoverLayer: null }))
+  beforeEach(() => useStore.setState({ xray: false, layers: [], hoverLayer: null, scenario: 'station', suit: false }))
 
   it('o raio-X mostra todos os sistemas de uma vez, sem precisar abrir um a um', () => {
     st().setXray(true)
@@ -55,5 +55,38 @@ describe('raio-X e camadas do atlas', () => {
     expect(st().hoverLayer).toBe('vessels')
     st().setHoverLayer(null)
     expect(st().hoverLayer).toBeNull()
+  })
+})
+
+describe('raio-X: sem ele com o traje de EVA; no foguete, sim', () => {
+  beforeEach(() => useStore.setState({ xray: false, layers: [], hoverLayer: null, scenario: 'station', suit: false }))
+
+  it('sem traje o raio-X vale; com o traje, não', () => {
+    expect(xrayAllowed(false)).toBe(true)
+    expect(xrayAllowed(true)).toBe(false)
+  })
+
+  it('no foguete o raio-X e as camadas ligam', () => {
+    useStore.setState({ scenario: 'launch' })
+    st().setXray(true)
+    expect(st().xray).toBe(true)
+    expect(st().layers.length).toBeGreaterThan(0)
+    st().toggleLayer('skeleton')
+    st().toggleLayer('skeleton')
+    expect(st().layers).toContain('skeleton')
+  })
+
+  it('com o traje vestido também não liga', () => {
+    useStore.setState({ suit: true })
+    st().setXray(true)
+    st().toggleLayer('nerves')
+    expect(st().xray).toBe(false)
+    expect(st().layers).toEqual([])
+  })
+
+  it('ir para o foguete mantém o raio-X que estava ligado', () => {
+    st().setXray(true)
+    st().setScenario('launch')
+    expect(st().xray).toBe(true)
   })
 })

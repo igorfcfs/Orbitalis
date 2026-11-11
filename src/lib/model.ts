@@ -1,6 +1,7 @@
 import { ACTIONS } from '../data/actions'
 import { ASTRONAUTS } from '../data/astronauts'
 import { NOISE } from '../data/rules'
+import { linkText, profileOf } from '../data/scenarios'
 import { METRICS, PRIORITY_ORDER, SYSTEMS, SYSTEM_IDS } from '../data/systems'
 import { CATEGORY_LABEL, CATEGORY_STEPS, triage, type EmergencySession } from '../engine/emergency'
 import { evaluateMetric, worst } from '../engine/status'
@@ -26,7 +27,10 @@ export const SUIT_SHIELD_FACTOR = 2
 const DOSE_METRICS = new Set(['mission_dose', 'career_dose'])
 
 /** Taxa de dose da exposição atual (mSv/dia): casco do habitat (medida) ou só o traje (estimada). */
-export const doseRate = (sim: Pick<Sim, 'suit'>) => CRUISE_DOSE_RATE * (sim.suit ? SUIT_SHIELD_FACTOR : 1)
+export const doseRate = (sim: Pick<Sim, 'suit' | 'scenario'>) => profileOf(sim.scenario).dose.rate * (sim.suit ? SUIT_SHIELD_FACTOR : 1)
+
+/** Duração da fase do cenário em dias (o cruzeiro a Marte tem MISSION_LENGTH) */
+export const missionLength = (sim: Pick<Sim, 'scenario'>) => profileOf(sim.scenario).length
 
 export interface Exposure {
   label: string
@@ -35,15 +39,18 @@ export interface Exposure {
   shielding: string
 }
 
-export function exposure(sim: Pick<Sim, 'suit'>): Exposure {
-  return sim.suit
-    ? { label: 'EVA suit', rate: doseRate(sim), provenance: 'ESTIMATED', shielding: 'Outside the hull. Only the suit shields you.' }
-    : { label: 'Habitat', rate: doseRate(sim), provenance: 'CONTINUOUS', shielding: 'Inside the hull. The structure shields you.' }
+export function exposure(sim: Pick<Sim, 'suit' | 'scenario'>): Exposure {
+  const p = profileOf(sim.scenario)
+  if (sim.suit) {
+    return { label: 'EVA suit', rate: doseRate(sim), provenance: 'ESTIMATED', shielding: p.world === 'lunar' ? 'On the surface. Only the suit shields you.' : 'Outside the hull. Only the suit shields you.' }
+  }
+  const shielding = p.world === 'capsule' ? 'On Earth. The atmosphere shields you.' : p.world === 'lunar' ? 'Inside the base. Shielding is not published, so none is assumed.' : 'Inside the hull. The structure shields you.'
+  return { label: p.inside, rate: doseRate(sim), provenance: p.dose.provenance, shielding }
 }
 
 /** Dose de carreira projetada para o fim da missão, mantida a exposição atual. */
-export function careerAtArrival(value: number, sim: Pick<Sim, 'suit' | 'day'>) {
-  return value + doseRate(sim) * Math.max(0, MISSION_LENGTH - sim.day)
+export function careerAtArrival(value: number, sim: Pick<Sim, 'suit' | 'day' | 'scenario'>) {
+  return value + doseRate(sim) * Math.max(0, missionLength(sim) - sim.day)
 }
 
 export const getAstronaut = (id: string) => ASTRONAUTS.find((a) => a.id === id)!
@@ -123,7 +130,7 @@ export function resolveMetric(astro: Astronaut, metricId: string, sim: Sim): Res
   const def = METRICS[metricId]
   const nMeas = sim.measurements.reduce((n, m) => (m.astronautId === astro.id && m.metric === metricId ? n + 1 : n), 0)
   const isDose = DOSE_METRICS.has(metricId)
-  const key = `${astro.id}:${metricId}:${sim.day}:${sim.solar}:${nMeas}:${isDose && sim.suit ? 'suit' : ''}`
+  const key = `${astro.id}:${metricId}:${sim.day}:${sim.solar}:${nMeas}:${isDose ? doseRate(sim) : ''}`
   const hit = cache.get(key)
   if (hit) return hit
   if (cache.size > 4000) cache.clear()
@@ -200,7 +207,8 @@ export function systemActions(astro: Astronaut, system: SystemId, sim: Sim): Act
   const [primary, second] = SYSTEMS[system].actions
   const primaryId = sim.solar && system === 'radiation' ? 'RAD-SHELTER' : primary
   const secondId = status === 'critical' ? 'CMO-CONSULT' : second
-  const list: ActionView[] = [ACTIONS[primaryId], ACTIONS[secondId]].map((a) => ({ ...a, systemId: system }))
+  const notes = profileOf(sim.scenario).actionNotes
+  const list: ActionView[] = [ACTIONS[primaryId], ACTIONS[secondId]].map((a) => ({ ...a, systemId: system, note: notes[a.id] }))
   if (astro.isCMO) {
     const consult = list.find((a) => a.id === 'CMO-CONSULT')
     if (consult) {
@@ -340,7 +348,7 @@ export function packetText(astro: Astronaut, sim: Sim, flags: Record<string, tru
   const lines = [
     `ORBITALIS flight surgeon packet`,
     `Astronaut: ${astro.name} (${astro.role})`,
-    `Mission Day ${sim.day} of ~${MISSION_LENGTH}. Earth link: ${sim.link === 'blackout' ? 'blackout (autonomous)' : `${LINK_DELAY_MIN} min delay`}.`,
+    `Scenario: ${profileOf(sim.scenario).name}. ${profileOf(sim.scenario).clock === 'launch' ? 'Launch day' : `Mission Day ${sim.day} of ~${missionLength(sim)}`}. Earth link: ${linkText(sim.scenario, sim.link)}${sim.link === 'blackout' ? ' (autonomous)' : ''}.`,
     `Overall status: ${STATUS_LABEL[astronautStatus(astro, sim)]}.`,
     `Data are synthetic and illustrative. Status is computed by deterministic rules, not by AI.`,
     '',
@@ -397,4 +405,4 @@ export function emergencyPacketLines(patient: Astronaut, s: EmergencySession): s
   return lines
 }
 
-export { signed, shortUnit }
+export { signed, shortUnit, linkText, profileOf }

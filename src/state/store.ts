@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { create } from 'zustand'
 import { EMPTY_ANSWERS, type EmergencyAnswers, type EmergencySession } from '../engine/emergency'
+import { DEFAULT_SCENARIO, SCENARIOS, SCENARIO_IDS, canGo, type ScenarioId } from '../data/scenarios'
 import { MISSION_DAY } from '../lib/model'
 import type { Decision, Measurement, Sim, SystemId } from '../types'
 
@@ -44,6 +45,8 @@ interface Store extends Persisted {
   solar: boolean
   link: 'delayed' | 'blackout'
   suit: boolean
+  /** Cenário da missão (RF-33): foguete, estação espacial, base lunar ou espaço sideral */
+  scenario: ScenarioId
   xray: boolean
   /** Camadas do atlas visíveis (esqueleto, músculos, órgãos, circulação, nervos); xray = há alguma ligada */
   layers: LayerId[]
@@ -64,6 +67,10 @@ interface Store extends Persisted {
   setSolar: (v: boolean) => void
   setLink: (v: Sim['link']) => void
   setSuit: (v: boolean) => void
+  /** Escolhe o cenário direto (simulação): dia padrão do cenário, sem traje nem evento solar */
+  setScenario: (id: ScenarioId) => void
+  /** Transição lógica entre cenários: só as que o perfil de origem lista. Devolve se aconteceu */
+  advance: (to: ScenarioId) => boolean
   setXray: (v: boolean) => void
   toggleLayer: (id: LayerId) => void
   setAllLayers: (on: boolean) => void
@@ -86,23 +93,35 @@ interface Store extends Persisted {
 
 const persistedOf = (s: Store): Persisted => ({ measurements: s.measurements, diary: s.diary, flags: s.flags, sent: s.sent, emergencies: s.emergencies })
 
+/**
+ * O raio-X não existe com o traje de EVA vestido, em nenhum lugar (o corpo por dentro não acompanha o traje): decisão do dono
+ * do produto, 10/11/2026. No foguete ele vale (revisto pelo dono em 11/11): a anatomia acompanha o corpo deitado no assento.
+ */
+export const xrayAllowed = (suit: boolean) => !suit
+
 /** Parâmetros de URL para depurar e demonstrar: ?suit=1&xray=1&solar=1&day=200&link=blackout */
 function urlFlags() {
   try {
     const q = new URLSearchParams(window.location.search)
+    // `deep` era o nome do cruzeiro antes de virar a estação espacial; o espaço profundo agora é a EVA da estação
+    const asked = q.get('scenario')
+    const scenario: ScenarioId = asked === 'deep' ? 'station' : asked && (SCENARIO_IDS as string[]).includes(asked) ? (asked as ScenarioId) : DEFAULT_SCENARIO
+    const prof = SCENARIOS[scenario]
     const day = Number(q.get('day'))
     const wanted = (q.get('layers') ?? '').split(',').filter((l): l is LayerId => (ATLAS_LAYERS as string[]).includes(l))
-    const xray = q.get('xray') === '1' || wanted.length > 0
+    const suit = q.get('suit') === '1' && prof.eva.available
+    const xray = (q.get('xray') === '1' || wanted.length > 0) && xrayAllowed(suit)
     return {
-      suit: q.get('suit') === '1',
+      suit,
+      scenario,
       xray,
-      layers: wanted.length ? wanted : xray ? DEFAULT_LAYERS : [],
+      layers: !xray ? [] : wanted.length ? wanted : DEFAULT_LAYERS,
       solar: q.get('solar') === '1',
       link: q.get('link') === 'blackout' ? ('blackout' as const) : ('delayed' as const),
-      day: Number.isFinite(day) && day >= 10 && day <= 250 ? day : MISSION_DAY,
+      day: Number.isFinite(day) && day >= prof.minDay && day <= prof.length ? Math.round(day) : prof.defaultDay,
     }
   } catch {
-    return { suit: false, xray: false, layers: [] as LayerId[], solar: false, link: 'delayed' as const, day: MISSION_DAY }
+    return { suit: false, scenario: DEFAULT_SCENARIO, xray: false, layers: [] as LayerId[], solar: false, link: 'delayed' as const, day: MISSION_DAY }
   }
 }
 
@@ -126,12 +145,21 @@ export const useStore = create<Store>((set, get) => {
     setSolar: (solar) => set({ solar }),
     setLink: (link) => set({ link }),
     // Com o traje fechado o raio-X não faz sentido (o corpo por dentro não acompanha o traje): vestir o desliga
-    setSuit: (suit) => set(suit ? { suit, xray: false, layers: [] } : { suit }),
-    setXray: (xray) => set((s) => ({ xray, layers: xray ? (s.layers.length ? s.layers : DEFAULT_LAYERS) : [] })),
-    setAllLayers: (on) => set({ layers: on ? ATLAS_LAYERS : [], xray: on }),
+    setSuit: (suit) => set((s) => (suit ? (SCENARIOS[s.scenario].eva.available ? { suit, xray: false, layers: [] } : {}) : { suit })),
+    setScenario: (scenario) => set(() => ({ scenario, day: SCENARIOS[scenario].defaultDay, suit: false, solar: false })),
+    advance: (to) => {
+      const s = get()
+      if (!canGo(s.scenario, to)) return false
+      // Cada fase tem o próprio relógio: a próxima começa no dia de entrada dela, sem traje e sem evento solar
+      set({ scenario: to, day: SCENARIOS[to].enterDay, suit: false, solar: false })
+      return true
+    },
+    setXray: (xray) => set((s) => (xray && !xrayAllowed(s.suit) ? {} : { xray, layers: xray ? (s.layers.length ? s.layers : DEFAULT_LAYERS) : [] })),
+    setAllLayers: (on) => set((s) => (on && !xrayAllowed(s.suit) ? {} : { layers: on ? ATLAS_LAYERS : [], xray: on })),
     setHoverLayer: (hoverLayer) => set((s) => (s.hoverLayer === hoverLayer ? s : { hoverLayer })),
     toggleLayer: (id) =>
       set((s) => {
+        if (!s.layers.includes(id) && !xrayAllowed(s.suit)) return {}
         const layers = s.layers.includes(id) ? s.layers.filter((l) => l !== id) : [...s.layers, id]
         return { layers, xray: layers.length > 0 }
       }),
@@ -200,6 +228,7 @@ export const useSim = (): Sim => {
   const solar = useStore((s) => s.solar)
   const link = useStore((s) => s.link)
   const suit = useStore((s) => s.suit)
+  const scenario = useStore((s) => s.scenario)
   const measurements = useStore((s) => s.measurements)
-  return useMemo(() => ({ day, solar, suit, link, measurements }), [day, solar, suit, link, measurements])
+  return useMemo(() => ({ day, solar, suit, link, measurements, scenario }), [day, solar, suit, link, measurements, scenario])
 }
