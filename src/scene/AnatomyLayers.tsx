@@ -1,9 +1,10 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { LayerId } from '../state/store'
 import type { Status, SystemId } from '../types'
 import { INITIAL_LAYERS, LAYERS, SYSTEM_LAYERS, WARM_LAYERS } from './anatomy'
+import { ANATOMY_JOINTS, LEG_POSE_GLSL, LegPoseContext, ensureLegWeights } from './legPose'
 import { useAnatomy } from './useAnatomy'
 
 const STATUS_HEX: Record<Status, string> = { nominal: '#3DDC97', watch: '#FFB547', critical: '#FF5D5D' }
@@ -56,6 +57,9 @@ export function AnatomyLayers({
     return [...set]
   }, [selected, active, layers, warm])
   const anatomy = useAnatomy(want)
+  // Sentado (foguete) ou nos passos da Lua as pernas giram como as do corpo, para o esqueleto e os músculos ficarem dentro dele
+  const legPose = useContext(LegPoseContext)
+  const legU = useMemo(() => ({ hip: { value: ANATOMY_JOINTS.hip.clone() }, knee: { value: ANATOMY_JOINTS.knee.clone() }, pose: legPose ?? { value: new THREE.Vector4() } }), [legPose])
   const entries = useRef<Entry[]>([])
   const fadeIn = useRef(0)
   const layerCount = Object.keys(anatomy.layers).length
@@ -77,22 +81,34 @@ export function AnatomyLayers({
         const rimCol = { value: hue.clone() }
         material.userData.rim = rim
         material.userData.rimCol = rimCol
+        ensureLegWeights(b.geometry, 'male')
         material.onBeforeCompile = (shader) => {
           shader.uniforms.uRim = rim
           shader.uniforms.uRimCol = rimCol
+          shader.uniforms.uLegPose = legU.pose
+          shader.uniforms.uHipJ = legU.hip
+          shader.uniforms.uKneeJ = legU.knee
+          shader.vertexShader = shader.vertexShader
+            .replace('#include <common>', `#include <common>
+attribute float aLeg;
+${LEG_POSE_GLSL}`)
+            .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+objectNormal = legDir(position, aLeg, objectNormal);`)
+            .replace('#include <begin_vertex>', `#include <begin_vertex>
+transformed = legPos(position, aLeg, transformed);`)
           shader.fragmentShader = shader.fragmentShader
             .replace('#include <common>', '#include <common>\nuniform float uRim; uniform vec3 uRimCol;')
             .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
               float rimF = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 2.0);
               totalEmissiveRadiance += uRimCol * rimF * uRim;`)
         }
-        material.customProgramCacheKey = () => 'anatomy-rim'
+        material.customProgramCacheKey = () => 'anatomy-rim-leg'
         out.push({ key: `${l.id}:${b.system}`, layer: l.id, system: b.system, geometry: b.geometry, material, order: info.renderOrder })
       }
     }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layerCount])
+  }, [layerCount, legU])
 
   useEffect(() => () => built.forEach((b) => b.material.dispose()), [built])
 

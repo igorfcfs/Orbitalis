@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { LEG_POSE_GLSL } from './legPose'
 import { COLLAR_SLOPE, COLLAR_Y } from './bodyBuild'
 
 /**
@@ -45,6 +46,10 @@ export interface BodyUniforms {
   uLegs: THREE.IUniform<THREE.Vector3>
   /** Pernas do traje: abertura lateral esquerda e direita (rad, x e y), dobra do joelho esquerdo e direito (rad, z e w) */
   uLegs2: THREE.IUniform<THREE.Vector4>
+  /** Postura das pernas (RF-33): flexão do quadril E e D e do joelho E e D (rad), e as juntas da perna esquerda (legPose.ts) */
+  uLegPose: THREE.IUniform<THREE.Vector4>
+  uHipJ: THREE.IUniform<THREE.Vector3>
+  uKneeJ: THREE.IUniform<THREE.Vector3>
 }
 
 export function makeBodyUniforms(): BodyUniforms {
@@ -71,6 +76,9 @@ export function makeBodyUniforms(): BodyUniforms {
     uSway: { value: new THREE.Vector2() },
     uLegs: { value: new THREE.Vector3() },
     uLegs2: { value: new THREE.Vector4() },
+    uLegPose: { value: new THREE.Vector4() },
+    uHipJ: { value: new THREE.Vector3(0.088, 0.915, 0) },
+    uKneeJ: { value: new THREE.Vector3(0.082, 0.443, 0.006) },
   }
 }
 
@@ -338,7 +346,7 @@ export function patchBodyMaterial(mat: THREE.Material, u: BodyUniforms, mode: Sh
       uHover: u.uHover, uSel: u.uSel, uReveal: u.uReveal, uXray: u.uXray, uTime: u.uTime, uSuitY: u.uSuitY,
       uFade: u.uFade, uStat: u.uStat, uStatCol: u.uStatCol, uRevealCol: u.uRevealCol, uHoverCol: u.uHoverCol, uStatScale: u.uStatScale,
       uAtro: u.uAtro, uMassD: u.uMassD, uFatigue: u.uFatigue, uEyeC: u.uEyeC, uBeard: u.uBeard, uBreath: u.uBreath,
-      uInner: u.uInner, uSway: u.uSway, uLegs: u.uLegs, uLegs2: u.uLegs2,
+      uInner: u.uInner, uSway: u.uSway, uLegs: u.uLegs, uLegs2: u.uLegs2, uLegPose: u.uLegPose, uHipJ: u.uHipJ, uKneeJ: u.uKneeJ,
     })
     if (decals) {
       Object.assign(shader.uniforms, {
@@ -374,6 +382,14 @@ export function patchBodyMaterial(mat: THREE.Material, u: BodyUniforms, mode: Sh
         #endif
         #if defined(BODY_SKIN) || defined(BODY_COVER) || defined(BODY_SUIT)
         ${BREATH_GLSL}
+        #endif
+        #if defined(BODY_SKIN) || defined(BODY_COVER)
+        attribute float aLeg;
+        ${LEG_POSE_GLSL}
+        #endif`)
+      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+        #if defined(BODY_SKIN) || defined(BODY_COVER)
+        objectNormal = legDir(aBase, aLeg, objectNormal);
         #endif`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         #ifdef BODY_MORPH
@@ -382,6 +398,7 @@ export function patchBodyMaterial(mat: THREE.Material, u: BodyUniforms, mode: Sh
         #endif
         #if defined(BODY_SKIN) || defined(BODY_COVER)
         transformed += breathDisp(aBase);
+        transformed = legPos(aBase, aLeg, transformed);
         #endif
         #if defined(BODY_SUIT) && defined(BODY_SYSPOS)
         transformed += suitSway(aBase, aArm);
@@ -716,20 +733,23 @@ export function makeGhostMaterial(u: BodyUniforms, mode: 'skin' | 'cover' | 'sui
     side: THREE.FrontSide,
     uniforms: {
       uXray: u.uXray, uTime: u.uTime, uSuitY: u.uSuitY, uFade: u.uFade, uAtro: u.uAtro, uMassD: u.uMassD, uBreath: u.uBreath, uSway: u.uSway, uLegs: u.uLegs, uLegs2: u.uLegs2,
+      uLegPose: u.uLegPose, uHipJ: u.uHipJ, uKneeJ: u.uKneeJ,
       uTint: { value: new THREE.Color(mode === 'suit' ? '#cfe8ff' : '#a9c8e8') },
     },
     vertexShader: /* glsl */ `
-      attribute vec3 aBase; attribute vec3 aDir; attribute vec2 aW;
+      attribute vec3 aBase; attribute vec3 aDir; attribute vec2 aW; attribute float aLeg;
       uniform float uAtro; uniform float uMassD;
+      ${LEG_POSE_GLSL}
       ${mode === 'suit' ? 'uniform float uBreath; vec3 breathDisp(vec3 b) { return vec3(0.0); }' : BREATH_GLSL}
       varying vec3 vN; varying vec3 vV; varying vec3 vBase; varying float vWY;
       void main(){
         vec3 transformed = position;
         transformed += aDir * (aW.x * uAtro + aW.y * uMassD);
         transformed += breathDisp(aBase);
+        transformed = legPos(aBase, aLeg, transformed);
         vBase = aBase;
         vec4 mv = modelViewMatrix * vec4(transformed, 1.0);
-        vN = normalize(normalMatrix * normal);
+        vN = normalize(normalMatrix * legDir(aBase, aLeg, normal));
         vV = -mv.xyz;
         vWY = (modelMatrix * vec4(transformed, 1.0)).y;
         gl_Position = projectionMatrix * mv;

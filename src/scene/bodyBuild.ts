@@ -1044,7 +1044,7 @@ interface Morph {
 }
 
 /** Cabeça do fêmur (o atlas não marca o quadril); eixo da coxa no espaço do modelo. */
-const HIP = new THREE.Vector3(0.088, 0.915, 0)
+export const HIP = new THREE.Vector3(0.088, 0.915, 0)
 
 /**
  * O atlas tem o corpo de um halterofilista. Aqui cada membro e o tronco ganham um fator radial
