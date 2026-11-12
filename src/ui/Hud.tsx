@@ -340,19 +340,45 @@ export function MenuSheet({ route }: { route: Route }) {
         <section>
           <h3 className="label">Simulation</h3>
           {scn.length > 1 && (
-            <label className="sim-row">
-              <span>Mission day</span><span className="mono">Day {day}</span>
-              <input type="range" min={scn.minDay} max={scn.length} step={1} value={day} onChange={(e) => setDay(Number(e.target.value))} aria-label="Mission day" />
+            <label className="sim-day">
+              <span className="sim-day-head">
+                <span>Mission day</span>
+                <span className="sim-pill mono">Day {day}</span>
+              </span>
+              <input
+                type="range"
+                className="range"
+                min={scn.minDay}
+                max={scn.length}
+                step={1}
+                value={day}
+                onChange={(e) => setDay(Number(e.target.value))}
+                aria-label="Mission day"
+                style={{ '--pct': `${((day - scn.minDay) / Math.max(1, scn.length - scn.minDay)) * 100}%` } as React.CSSProperties}
+              />
+              <span className="sim-day-ends mono" aria-hidden="true">
+                <span>Day {scn.minDay}</span>
+                <span>Day {scn.length}</span>
+              </span>
             </label>
           )}
-          <label className="check">
-            <input type="checkbox" checked={solar} onChange={(e) => setSolar(e.target.checked)} />
-            <span>Solar particle event</span>
+          <label className="switch-row">
+            <span className="switch-text">
+              <span>Solar particle event</span>
+              <small>Radiation turns critical for the whole crew</small>
+            </span>
+            <input type="checkbox" role="switch" className="switch" checked={solar} onChange={(e) => setSolar(e.target.checked)} />
           </label>
-          <fieldset>
+          <fieldset className="seg-field">
             <legend className="label">Earth link</legend>
-            <label className="check"><input type="radio" name="link" checked={link === 'delayed'} onChange={() => setLink('delayed')} /><span>{scn.link.delayText}</span></label>
-            <label className="check"><input type="radio" name="link" checked={link === 'blackout'} onChange={() => setLink('blackout')} /><span>{scn.link.blackoutText}</span></label>
+            <div className="seg">
+              {(['delayed', 'blackout'] as const).map((v) => (
+                <label key={v} className={`seg-opt${link === v ? ' on' : ''}`}>
+                  <input type="radio" name="link" className="sr-only" checked={link === v} onChange={() => setLink(v)} />
+                  <span>{v === 'delayed' ? scn.link.delayText : scn.link.blackoutText}</span>
+                </label>
+              ))}
+            </div>
           </fieldset>
           <div className="btn-row">
             <button type="button" className="btn" onClick={() => setDay(scn.defaultDay)}>{scn.clock === 'day' ? `Day ${scn.defaultDay}` : 'Reset'}</button>
