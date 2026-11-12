@@ -130,6 +130,13 @@ export interface Look {
   accent: string
 }
 
+/** Perfil pré-voo sintético (RF-34): IDs do catálogo fechado em data/profile.ts, coletados em terra antes do voo. */
+export interface PreflightProfile {
+  /** Dia da coleta, contado do lançamento (negativo: antes do voo) */
+  collectedDay: number
+  findings: string[]
+}
+
 export interface Astronaut {
   id: string
   initials: string
@@ -140,6 +147,8 @@ export interface Astronaut {
   heightM: number
   headline: Record<Status, string>
   overrides: Record<string, MetricOverride>
+  /** Só contexto: o motor nunca lê o perfil */
+  profile?: PreflightProfile
 }
 
 export interface Measurement {

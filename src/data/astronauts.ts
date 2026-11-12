@@ -2,6 +2,7 @@ import type { Astronaut } from '../types'
 
 // Tripulação 100% fictícia. O status de cada um nasce do motor, não de valores marcados à mão:
 // os overrides só definem os valores do dia 142 e quando cada exame foi feito pela última vez.
+// O perfil pré-voo (RF-34) é sintético, escolhido do catálogo fechado de data/profile.ts, e só explica: o motor não o lê.
 export const ASTRONAUTS: Astronaut[] = [
   {
     id: 'lena', initials: 'LM', name: 'Lena Moreau', role: 'Commander', look: { skin: '#dbab8e', hair: '#5a3524', eyes: '#4f7fa8', build: 'female', accent: '#4f8cff' }, heightM: 1.7,
@@ -16,6 +17,7 @@ export const ASTRONAUTS: Astronaut[] = [
       disc: { lastTaken: 126 },
       temp: { baseline: 36.6, value: 36.7 },
     },
+    profile: { collectedDay: -120, findings: ['oxstress-methylation', 'atopy'] },
   },
   {
     id: 'rafael', initials: 'RD', name: 'Rafael Duarte', role: 'Flight Engineer', look: { skin: '#c58b62', hair: '#17110e', eyes: '#4a2f1b', build: 'male', accent: '#a37bff' }, heightM: 1.82,
@@ -32,6 +34,7 @@ export const ASTRONAUTS: Astronaut[] = [
       career_dose: { baseline: 210, value: 465.6 },
       temp: { baseline: 36.5, value: 36.5 },
     },
+    profile: { collectedDay: -120, findings: ['latent-herpes'] },
   },
   {
     id: 'aiko', initials: 'AS', name: 'Aiko Sato', role: 'Crew Medical Officer', isCMO: true, look: { skin: '#deb597', hair: '#1d1513', eyes: '#3b2518', build: 'female', accent: '#dfe6f7' }, heightM: 1.62,
@@ -47,6 +50,7 @@ export const ASTRONAUTS: Astronaut[] = [
       career_dose: { baseline: 180, value: 435.6 },
       temp: { baseline: 36.6, value: 36.8 },
     },
+    profile: { collectedDay: -120, findings: ['per3-long', 'atopy'] },
   },
   {
     id: 'daniel', initials: 'DO', name: 'Daniel Osei', role: 'Mission Specialist', look: { skin: '#70483a', hair: '#0f0c0b', eyes: '#47290f', build: 'male', accent: '#6ec1e4' }, heightM: 1.78,
@@ -63,5 +67,6 @@ export const ASTRONAUTS: Astronaut[] = [
       career_dose: { baseline: 140, value: 395.6 },
       temp: { baseline: 36.7, value: 36.7 },
     },
+    profile: { collectedDay: -120, findings: ['sans-onecarbon', 'latent-herpes'] },
   },
 ]
