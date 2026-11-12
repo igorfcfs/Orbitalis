@@ -1,10 +1,10 @@
 # ORBITALIS — Status dos requisitos
 
-6 de novembro de 2026 · para a equipe AstroCoders · o evento é em 14–15/11 (faltam 8 dias; os resources oficiais saem em 13/11)
+12 de novembro de 2026 · para a equipe AstroCoders · o evento é em 14–15/11 (faltam 2 dias; os resources oficiais saem em 13/11)
 
-Estado do código em 06/11/2026 (`5953700`, tudo commitado), já com a rodada de UI/UX dos dados, a entrega de RF-18, RF-20, RF-23 a RF-27, RF-28, RF-29 (emergência, com o botão Emergency em todas as telas) e RF-32. Os requisitos vêm da especificação (`ORBITALIS — Especificação Final.md`, RF-01 a RF-27) e dos novos que você está avaliando (RF-29 a RF-34), mais o RF-28, que eu sugeri e você aprovou em 02/11. O RF-34 (personalização pelos exames epigenéticos) foi incluído por você em 04/11 e ainda não foi iniciado. O catálogo de emergência do RF-28 está em `ORBITALIS — Catálogo de Emergência (rascunho).md`.
+Estado do código em 12/11/2026 (`67d5970` mais o RF-34, ainda não commitado: 7 arquivos modificados e 3 novos), já com a rodada de UI/UX dos dados, a entrega de RF-18, RF-20, RF-23 a RF-27, RF-28, RF-29 (emergência, com o botão Emergency em todas as telas) e RF-32. Os requisitos vêm da especificação (`ORBITALIS — Especificação Final.md`, RF-01 a RF-27) e dos novos que você está avaliando (RF-29 a RF-34), mais o RF-28, que eu sugeri e você aprovou em 02/11. O RF-34 (personalização pelo perfil pré-voo genômico e epigenético) foi incluído por você em 04/11 e entregue em 12/11, com as suas três decisões do mesmo dia (ver "RF-34: o que foi construído"). O catálogo de emergência do RF-28 está em `ORBITALIS — Catálogo de Emergência (rascunho).md`.
 
-Conferi em 06/11: o typecheck limpo e os 158 testes (13 arquivos; os novos cobrem a emergência, RF-28 e RF-29, e o RF-32). Conferi em 02/11: o build, as rotas `/api/osdr` e `/api/explain`, e os 139 testes de então (10 arquivos; 27 novos cobrem RF-18, RF-20 e RF-23 a RF-27), as rotas `/api/osdr` (dados reais do OSDR, 400 para sistema desconhecido) e `/api/explain` (503 sem chave, 405 em GET) com o servidor de pé, e uma captura da tela Crew timeline. Do botão Emergency conferi só a captura da tela Crew; o menu de pacientes e o fluxo do paciente não foram abertos no navegador. **Não conferi:** uma chamada real ao modelo de IA (só `fetch` simulado nos testes), a câmera num aparelho real (o cálculo do pulso foi testado só com sinal sintético) nem a captura das telas de sistema e de registro. Conferi em 31/10, por captura de tela ou execução: o nível 1 e a lista de sistemas, o feed DONKI (HTTP 200, 15 flares), o typecheck e os 112 testes (8 arquivos, 27 deles do motor de status). Em 30/10 conferi as telas dos níveis 1 a 3, o teclado, o pacote, o formulário de registro e o evento solar. O restante vem da leitura do código e dos testes. A viabilidade e os riscos segundo as diretrizes da NASA estão em `ORBITALIS — Viabilidade e Riscos.md`.
+Conferi em 12/11, depois das correções de consistência: typecheck, build e os 205 testes (19 arquivos) numa cópia Linux do repositório (as dependências do `node_modules` são do Windows). Antes delas: os 199 testes (17 arquivos; 9 novos cobrem o RF-34, inclusive a invariância do motor), e capturas em Chrome headless dos níveis 2 e 3 com o perfil (Daniel, Aiko e Lena) e do nível 1 sem rolagem a 1440×800 nos quatro astronautas (702/702). Conferi em 06/11: o typecheck limpo e os 158 testes (13 arquivos; os novos cobrem a emergência, RF-28 e RF-29, e o RF-32). Conferi em 02/11: o build, as rotas `/api/osdr` e `/api/explain`, e os 139 testes de então (10 arquivos; 27 novos cobrem RF-18, RF-20 e RF-23 a RF-27), as rotas `/api/osdr` (dados reais do OSDR, 400 para sistema desconhecido) e `/api/explain` (503 sem chave, 405 em GET) com o servidor de pé, e uma captura da tela Crew timeline. Do botão Emergency conferi só a captura da tela Crew; o menu de pacientes e o fluxo do paciente não foram abertos no navegador. **Não conferi:** uma chamada real ao modelo de IA (só `fetch` simulado nos testes), a câmera num aparelho real (o cálculo do pulso foi testado só com sinal sintético) nem a captura das telas de sistema e de registro. Conferi em 31/10, por captura de tela ou execução: o nível 1 e a lista de sistemas, o feed DONKI (HTTP 200, 15 flares), o typecheck e os 112 testes (8 arquivos, 27 deles do motor de status). Em 30/10 conferi as telas dos níveis 1 a 3, o teclado, o pacote, o formulário de registro e o evento solar. O restante vem da leitura do código e dos testes. A viabilidade e os riscos segundo as diretrizes da NASA estão em `ORBITALIS — Viabilidade e Riscos.md`.
 
 ## 1. Resumo
 
@@ -13,16 +13,13 @@ Conferi em 06/11: o typecheck limpo e os 158 testes (13 arquivos; os novos cobre
 | Obrigatórios (RF-01 a RF-15) | 15 | 15 | 0 | 0 |
 | Fortes (RF-16 a RF-22) | 7 | 7 | 0 | 0 |
 | Opcionais (RF-23 a RF-27) | 5 | 5 | 0 | 0 |
-| Propostos (RF-28 a RF-34) | 7 | 3 | 1 | 3 |
+| Propostos (RF-28 a RF-36) | 9 | 4 | 1 | 4 |
 
 Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No escopo original não falta nada: RF-18, os cinco opcionais e a metade de RF-20 que faltava (sem WebGL) entraram em 02/11 (ver as ressalvas na seção 2).
 
-**Fora da lista de RFs há três pendências baratas** que a verificação de hoje encontrou, descritas na seção 8:
-1. A atribuição CC BY-SA do Z-Anatomy só aparece no modal Credits e em Sources; o CLAUDE.md pede também no rodapé do canvas.
-2. Não existem `LICENSE` nem `README`, e a spec exige licença documentada.
-3. Não há `ErrorBoundary` nem detecção de WebGL (é a metade que falta em RF-20).
+**Pendências fora da lista de RFs, fechadas em 12/11 (seção 8):** a atribuição CC BY-SA agora está no rodapé do canvas, além do modal e de Sources; `LICENSE` (MIT), campo `license` no `package.json` e `README.md` existem; a degradação sem WebGL e o `ErrorBoundary` já estavam entregues (RF-20, `scene/webgl.ts` e `SafeStage.tsx`). A declaração de IA tem rascunho em `ORBITALIS — AI Use Declaration.md`, com itens a confirmar pela equipe.
 
-## 2. Atendidos (29)
+## 2. Atendidos (31)
 
 | ID | Requisito | Onde está, e observações |
 | --- | --- | --- |
@@ -66,16 +63,18 @@ Os 15 obrigatórios estão atendidos: o projeto já responde ao enunciado. No es
 
 Nenhum. Os seis que estavam aqui (RF-18, RF-23 a RF-27) passaram para a seção 2 em 02/11.
 
-## 5. Propostos (RF-28 a RF-34)
+## 5. Propostos (RF-28 a RF-36)
 
-Os sete propostos foram aprovados para avaliação. **A tabela abaixo lista só os que seguem abertos (RF-30, RF-31, RF-33 e RF-34).** O RF-28 (catálogo de emergência) e o RF-32 (dispositivo de medição) estão entregues e constam na seção 2; o RF-29 (emergência) está parcial e consta na seção 3. Os detalhes vêm em ordem de número. Descrições e riscos como você escreveu; a coluna da direita é minha leitura do código. Em 02/11 os números 28 e 33 foram trocados, porque o catálogo de emergência é pré-requisito do RF-29.
+Os sete primeiros propostos (RF-28 a RF-34) foram aprovados para avaliação; **RF-35 e RF-36 entraram em 12/11 e aguardam a sua decisão** (não os conto como falha enquanto não forem aprovados). **A tabela abaixo lista os que seguem abertos (RF-30, RF-31, RF-35 e RF-36) e dois já entregues no protótipo que ficaram aqui pelo detalhe (RF-33 e RF-34).** O RF-28 (catálogo de emergência) e o RF-32 (dispositivo de medição) estão entregues e constam na seção 2; o RF-29 (emergência) está parcial e consta na seção 3. Os detalhes vêm em ordem de número. Descrições e riscos como você escreveu; a coluna da direita é minha leitura do código. Em 02/11 os números 28 e 33 foram trocados, porque o catálogo de emergência é pré-requisito do RF-29.
 
 | ID | Requisito | Risco (seu) | Situação hoje e minha leitura |
 | --- | --- | --- | --- |
 | RF-30 | CRUD de tripulantes | Baixo | Não iniciado. Eu estimo **Médio**: a tripulação está presa a 4 rostos, 4 posições e 4 estilos de cabelo fixos |
 | RF-31 | CRUD de dados da missão: duração, distância a ser percorrida, riscos… | Baixo | Não iniciado. **Baixo** para a duração; **Médio** se incluir distância e riscos |
+| RF-35 | Frase de consequência: uma linha que diz o que o desvio de uma métrica significa para a missão | A definir | Não iniciado; **proposto em 12/11, aguarda decisão**. Eu estimo **Médio**: o código é pequeno, o custo está em escrever e conferir uma frase com fonte por métrica |
+| RF-36 | Registro de sintomas do astronauta, em lista fechada, que entra no diário e no pacote | A definir | Não iniciado; **proposto em 12/11, aguarda decisão**. Eu estimo **Médio**: dado novo, tela de registro e testes; a regra do sintoma grave depende de uma decisão sua |
 | RF-33 | Adaptabilidade em 4 cenários: foguete, base lunar, estação espacial e espaço sideral | Alto | **Entregue em 06/11 no protótipo** (refeito no mesmo dia pela revisão do dono): três lugares com cenário e postura próprios (foguete com a tripulação deitada de costas na cápsula de pé, estação com o espaço profundo como EVA, base lunar com passos e saltos de 1/6 g) e as transições foguete → estação ou base lunar. Ver "RF-33: o que foi construído". Testes em `data/scenarios.test.ts` e `scene/legPose.test.ts`; conferido por captura em Chrome headless |
-| RF-34 | Personalizar os dados exibidos a cada astronauta, partindo da premissa de que existem seus exames epigenéticos espaciais | A definir (você não informou) | Não iniciado. Eu estimo **Médio**: o desenho é barato porque nada muda no motor, mas exige dados epigenéticos sintéticos por astronauta, uma regra fechada de personalização e testes de invariância. O risco de conformidade é maior que o de código (ver R-N17) |
+| RF-34 | Personalizar os dados exibidos a cada astronauta, partindo da premissa de que existem seus exames epigenéticos espaciais | A definir (você não informou) | **Entregue em 12/11 no protótipo**, com as suas decisões do dia: só achados ligados a um risco do voo, de um catálogo fechado com DOI; nunca muda o status; visível só ao próprio astronauta (níveis 2 e 3) e no pacote. Ver "RF-34: o que foi construído". 9 testes em `lib/personalize.test.ts`; conferido por captura em Chrome headless. O risco de conformidade segue (R-N17), agora mitigado |
 
 ### RF-28: catálogo de ações de emergência
 
@@ -183,6 +182,39 @@ A primeira versão foi recusada pelo dono: tratava "espaço sideral" como um qua
 
 ### RF-34: personalização dos dados pelos exames epigenéticos
 
+> **Entregue em 12/11/2026.** A premissa ficou: cada astronauta tem o exame genômico e epigenético pré-voo completo. O texto abaixo é o desenho de 04/11; o que mudou está em "RF-34: o que foi construído".
+
+#### RF-34: o que foi construído
+
+**Suas decisões de 12/11.** (1) Entram só vulnerabilidades com estudo publicado que as ligue a um risco do voo; alergia só como sensibilidade conhecida que importa a bordo; doença genética sem ligação com o voo e prontuário continuam fora (CLAUDE.md §14). (2) O perfil nunca muda o status: nem limiar pessoal, nem fila, nem ação. (3) Só o próprio astronauta e o pacote veem o perfil; nunca a Crew, as placas nem o nível 1.
+
+**Catálogo fechado** (`data/profile.ts`, estudos conferidos em 12/11 por DOI, revista e amostra):
+
+| Achado | Tipo | Métricas | Estudo |
+| --- | --- | --- | --- |
+| Alelos MTRR 66 G e SHMT1 1420 C (ciclo de um carbono) | Genótipo | edema de disco, acuidade | Zwart et al., 2016, FASEB J, 49 astronautas, doi:10.1096/fj.15-278457 |
+| Anticorpos contra varicela-zóster e Epstein–Barr (herpesvírus latentes) | Sorologia | linfócitos, temperatura, leucócitos | Mehta et al., 2017, npj Microgravity, 23 astronautas, doi:10.1038/s41526-017-0015-y |
+| Sensibilidade atópica conhecida de pele e vias aéreas | Histórico pré-voo | temperatura, leucócitos | Crucian et al., 2016, Int J Gen Med, 46 tripulantes da ISS, doi:10.2147/IJGM.S114188 |
+| PER3 com dois alelos longos (5/5) | Genótipo | sono, cognição | Viola et al., 2007, Curr Biol, 24 pessoas na Terra, doi:10.1016/j.cub.2007.01.073 (liga o genótipo ao desempenho). Barger et al., 2014, Lancet Neurol, 85 astronautas, doi:10.1016/S1474-4422(14)70122-X, é só contexto de que astronautas dormem pouco: o estudo não liga o genótipo ao sono em órbita, e a nota diz isso (corrigido em 12/11) |
+| Metilação de genes de estresse oxidativo e imunes acima da referência | Metilação do DNA | doses da missão e da carreira | Garrett-Bakelman et al., 2019, Science (Twins Study), um astronauta, doi:10.1126/science.aau8650 |
+
+Perfis: Lena (metilação, atopia), Rafael (herpesvírus), Aiko (PER3, atopia), Daniel (alelos do ciclo de um carbono, herpesvírus). Todos coletados 120 dias antes do lançamento.
+
+**Onde aparece.** Nível 3, em "About this number": o bloco "Your pre-flight profile" com o selo PERIODIC, a fase ("Collected on the ground 120 days before launch. Not measured in orbit."), a declaração de perfil sintético que nunca muda status, limite nem ação, e o link do estudo. Nível 2: "pre-flight profile note" na linha do aparelho do medidor e o mesmo bloco em "How it works". Pacote: só os achados dos sistemas que já estão no pacote (minimização). Sources: os seis estudos, a declaração e a linha do RF-34 na cobertura. A entrada da IA (`buildExplainInput`) não leva o perfil, e um teste garante isso.
+
+**Desvios do desenho de 04/11.** (a) Os estudos são citados por DOI, não por ID do OSDR: não confirmei um estudo do OSDR com dado epigenético humano individual (os dados do Inspiration4 estão no OSDR, mas não achei o acesso com metilação). (b) O selo PERIODIC é o do catálogo, mas a dica dele diz "on board"; no bloco do perfil a dica foi trocada por "Exam taken on the ground before flight, not on board". (c) A degradação não depende do OSDR: o perfil é local.
+
+**Critérios de aceite.**
+- [x] A mesma métrica mostra notas diferentes para perfis diferentes (temperatura: atopia para Lena e Aiko, herpesvírus para Rafael e Daniel; testado).
+- [x] A nota aparece só nos níveis 2 e 3 e no pacote, com selo PERIODIC, fase da coleta e link para um estudo real (por DOI, não pelo OSDR: critério ajustado).
+- [x] Teste confirma status, limiar, projeção e ação idênticos com e sem perfil, num módulo novo para não bater no cache de `resolveMetric`.
+- [x] A tela diz que o perfil é sintético (no bloco e em Sources).
+- [x] A ausência do perfil, ou um ID fora do catálogo, não quebra a tela (testado).
+
+**Não conferi:** o pacote no navegador (só o texto, por teste) e a leitura das notas por alguém da área médica.
+
+#### Desenho de 04/11
+
 **Requisito (incluído por você em 04/11).** Personalizar os dados exibidos a cada astronauta, partindo da premissa de que existem os exames epigenéticos espaciais de cada um. Ele substitui o rascunho "Camada explicativa com baseline ômico pré-voo" que estava neste número: mantive as regras daquele rascunho (itens 1, 2, 4 e 6 abaixo) e ampliei o escopo de "explicar um número" para "escolher o que cada astronauta vê".
 
 **Como li.** Cada astronauta tem um perfil epigenético fictício (por exemplo, marcadores de metilação ligados a vias que o HRP associa ao voo, como reparo de DNA, resposta imune, remodelação óssea e muscular e ritmo circadiano). O perfil decide **quais notas de contexto aparecem e em que ordem** para aquele astronauta. Ele não decide o status.
@@ -217,6 +249,38 @@ A primeira versão foi recusada pelo dono: tratava "espaço sideral" como um qua
 
 **Decisões suas:** (1) a personalização só escolhe e ordena notas, ou também pode reordenar a fila de medições (por exemplo, pedir uma amostra antes)? A segunda muda o que o astronauta faz, então teria de ser regra em código, com ID do catálogo e teste; recomendo deixá-la de fora. (2) O exame é só pré-voo, em terra, ou também há coleta em voo? Recomendo pré-voo, pelo item 7. (3) O marcador "profile-sensitive" entra no nível 2 ou fica só no nível 3 e no pacote? (4) Mantive a prioridade do rascunho (opcional, primeiro a cortar); mande subir se quiser.
 
+### RF-35: frase de consequência (proposto em 12/11, não iniciado)
+
+**Descrição.** Cada métrica fora do nominal ganha uma frase curta que diz o que aquele desvio significa para a missão ou para o astronauta, para o número deixar de ser só um número (o enunciado pede que o astronauta *avalie*). As frases vêm de um catálogo fechado (`data/consequences.ts`), escritas por pessoas a partir da justificativa dos requisitos da NASA-STD-3001 e das evidências do HRP, com a fonte de cada uma em `CONSEQUENCE_SOURCES`. A IA **não** escreve nem recebe essas frases.
+
+**Critérios de aceite.**
+- [ ] Cada frase tem até 25 palavras, nenhum dígito (os números vêm do motor) e fonte citada; sem fonte a frase não entra.
+- [ ] Aparece sempre no nível 3 e, no nível 2, só quando a métrica não está NOMINAL.
+- [ ] Não aparece na Crew, nas placas nem no nível 1.
+- [ ] Teste: status, limiar, projeção e ação são idênticos com e sem as frases, e a entrada da IA não contém nenhuma delas.
+- [ ] Nenhuma frase sugere medicamento, dose ou diagnóstico.
+
+**Riscos.** Contra o motor, nenhum (regra 1). Contra a validade científica: uma frase que afirma mais do que a fonte sustenta (o mesmo erro corrigido hoje na nota PER3). Mitigação: abrir cada fonte e conferir a frase contra ela antes de entrar; marcar "não verificado" o que não abrir.
+
+**Decisões suas.** (1) Acrescentar à regra 3 do CLAUDE.md §2 que a única fonte de frases de consequência é `data/consequences.ts`. (2) Se a frase também entra no pacote do flight surgeon.
+
+### RF-36: registro de sintomas (proposto em 12/11, não iniciado)
+
+**Descrição.** O astronauta registra um sintoma de uma lista fechada de 10, com gravidade e início, em tela própria. O registro é um tipo separado do diário de decisões (`SymptomEntry`, distinto de `DecisionEntry`), com lógica em `lib/symptoms.ts`. A janela mostrada é de 7 dias, filtrada pelo lugar (`world`) e limitada ao dia simulado. O texto da tela diz "Logged by crew. Not a diagnosis." O sintoma **nunca muda o status** (proposta: nova regra 8 no CLAUDE.md §6).
+
+**Critérios de aceite.**
+- [ ] A lista tem 10 sintomas, cada um com fonte; texto de interface em inglês e sem diagnóstico.
+- [ ] Teste: status, limiar, projeção e ação são idênticos com e sem sintomas registrados.
+- [ ] O registro respeita o lugar e o dia simulado; trocar de lugar não mistura registros.
+- [ ] Guarda em memória e `localStorage`, sempre em `try/catch`; em blackout marca `autonomous`, como o diário.
+- [ ] O pacote do flight surgeon inclui os sintomas dos últimos 7 dias, só dos sistemas que já estão nele.
+
+**Riscos.** Contra a conformidade, o §14: o histórico do próprio astronauta é permitido, mas sintoma pode parecer prontuário (o §14 foi reescrito hoje para separar uma coisa da outra). Contra a regra 3, qualquer texto que sugira causa ou tratamento.
+
+**Decisões suas.** (1) **Um sintoma grave deve acionar a ação `CMO-CONSULT` como prioridade?** Isso muda o que o astronauta faz, então teria de ser regra em código, com teste, e exigiria a regra 8 no §6 (hoje a regra 8 não existe e os sintomas não mudam nada). Recomendo deixá-lo de fora e só mostrar o botão do fluxo de emergência. (2) A lista dos 10 sintomas: quem a valida, já que o protocolo de emergência também não foi validado por um médico.
+
+**Prioridade.** RF-35 e RF-36 são opcionais e só entram depois dos obrigatórios. Ordem de corte entre os propostos abertos: RF-30, RF-31, RF-36 e, por último, o RF-35. Riscos: R-N18 e R-N19 em `Viabilidade e Riscos.md`.
+
 ## 6. Critérios de aceite (CLAUDE.md §15)
 
 | Critério | Situação | Observação |
@@ -224,7 +288,7 @@ A primeira versão foi recusada pelo dono: tratava "espaço sideral" como um qua
 | Abre direto em Crew; nenhuma landing page | Atendido | |
 | 4 astronautas com a matriz de status do dia 142 | Atendido | Testado |
 | Personagem com cor, cabelo, olhos e macacão; clicar na região abre o sistema certo | Atendido | |
-| Atribuição Z-Anatomy visível no canvas e no modal | **Parcial** | Só no modal Credits e em Sources; falta o rodapé do canvas |
+| Atribuição Z-Anatomy visível no canvas e no modal | Atendido (12/11) | Rodapé fixo `footer.canvas-attr` em `App.tsx`, além do modal Credits e de Sources. Não conferi por captura de tela se ele colide com o painel ou o dock |
 | Nível 1: veredito, 6 indicadores, 1 ação e até 2 medições, sem rolagem a 1440×800 | Atendido | Conferido nos 4 astronautas e no evento solar |
 | Nenhum painel de sistema com mais de 3 métricas ou 2 ações | Atendido | O imune tem 3 métricas com a temperatura |
 | Os 8 sistemas e seus status numa lista ao lado do corpo, ligada ao corpo pelo hover | Atendido | |
@@ -234,7 +298,7 @@ A primeira versão foi recusada pelo dono: tratava "espaço sideral" como um qua
 | Com o LLM fora do ar, o app continua completo com textos de reserva | Atendido | Testado com `fetch` simulado (`rf18to27.test.ts`): sem chave, erro de rede ou resposta reprovada, devolve null e o cliente mostra o texto de reserva. Falta repetir com a chave real |
 | A chave de API não aparece em nenhum arquivo do cliente | Atendido | Não há chave nem `import.meta.env` no cliente |
 | DONKI mostra `LIVE` ou `SAMPLE`, nunca erro na tela | Atendido | |
-| Teclado: Tab, setas, Enter e Esc navegam por todos os níveis | **Parcial** | Tab, Enter e Esc verificados do nível 1 ao 2 e de volta; nenhuma seta está implementada |
+| Teclado: Tab, setas, Enter e Esc navegam por todos os níveis | Atendido, sem captura (12/11) | Setas na lista de sistemas e na lista da Crew (`ui/arrowNav.ts`, testado em `arrowNav.test.ts`); Tab, Enter e Esc já estavam. Não testei com um teclado num navegador |
 | Teste humano: alguém de fora aponta quem precisa de atenção em ≤ 10 s | Pendente | Não feito |
 
 ## 7. Outros requisitos da especificação (sem número de RF)
@@ -248,7 +312,7 @@ A primeira versão foi recusada pelo dono: tratava "espaço sideral" como um qua
 | `prefers-reduced-motion` | Atendido | Animações, pulso e giro ficam parados |
 | Responsivo: painel vira bottom sheet abaixo de 1024 px | Atendido | Conferido a 900×800 |
 | Texto de interface em inglês, sem emojis | Atendido | |
-| Fallback sem WebGL (silhueta SVG) | Não atendido | Ver RF-20 |
+| Degradação sem WebGL | Atendido | Entregue em 02/11 (RF-20): `scene/webgl.ts` e `SafeStage.tsx`, com reserva em listas e painéis (não é uma silhueta SVG) |
 | Contraste AA | Não auditado | |
 | Desempenho: meta de 60 fps | Não atingida na GPU integrada | 27 a 45 fps medidos em 29–30/10 (Iris Xe); não remedido depois da UI de hoje |
 
@@ -257,10 +321,10 @@ A primeira versão foi recusada pelo dono: tratava "espaço sideral" como um qua
 | Item | Situação | Observação |
 | --- | --- | --- |
 | GLB do atlas e dos modelos no repositório, com atribuição | Atendido | `public/models/` (6 camadas, `suit.glb`, 4 cabeças, `ATTRIBUTION.md`) |
-| Atribuição CC BY-SA no rodapé do canvas | **Não atendido** | O CLAUDE.md §10 pede no canvas e no modal; hoje só há no modal e em Sources |
-| Licença do repositório | **Pendente** | Sem `LICENSE` e sem campo `license` no `package.json` (`private: true`); decidir MIT ou Apache 2.0. Pelos termos do Space Apps, sem licença indicada a NASA distribui o conteúdo original sob Apache 2.0 (R-N03) |
-| README | **Pendente** | Não existe. Sugestão: como rodar, fontes, licença e a declaração de IA |
-| Declaração de uso de IA na submissão | **Pendente, obrigatória** | O FAQ do Space Apps exige "a description of how SI tools were used during the development" (SI é o termo oficial para IA em 2026; R-N04). Inclui o uso de assistente de IA na escrita do código e a nota do Rocketbox (texturas de referência misturadas de fotos de pessoas, CLAUDE.md §0) |
+| Atribuição CC BY-SA no rodapé do canvas | Atendido (12/11) | `footer.canvas-attr` em `App.tsx` |
+| Licença do repositório | Atendido (12/11) | MIT (decisão do dono): `LICENSE` e `"license": "MIT"` no `package.json`. Material de terceiros mantém a licença própria (README e `ATTRIBUTION.md`). O repositório precisa estar público até a submissão (R-N03) |
+| README | Atendido (12/11) | `README.md`: o que é e o que não é, como rodar, hospedagem, uso de IA, licença e créditos |
+| Declaração de uso de IA na submissão | **Rascunho pronto; a equipe confirma e cola na submissão** (obrigatória) | O FAQ do Space Apps exige "a description of how SI tools were used during the development" (SI é o termo oficial para IA em 2026; R-N04). Rascunho em `ORBITALIS — AI Use Declaration.md`, com os itens a confirmar marcados `CONFIRM`. Falta incluir a nota do Rocketbox (texturas de referência misturadas de fotos de pessoas, CLAUDE.md §0) |
 | Licenças de terceiros e citação de todas as fontes | Pendente | Os termos exigem identificar a licença de cada material de terceiros e citar toda fonte, "even if it is open source" (R-N02, R-N05) |
 | Código escrito antes de 14/11 pode ser submetido? | **Risco alto** | O FAQ oficial diz que as equipes "are not allowed to begin working on the challenges prior to the hackathon" (R-N01), e o primeiro commit é de 28/10. Perguntar à organização agora, com o histórico do git, e guardar a resposta |
 | Demo: vídeo de até 30 s ou até 7 slides, link público sem login | Pendente | Designar quem grava (spec: a partir do meio-dia de domingo); roteiro sugerido em `ORBITALIS — Análise de UI e UX.md` |
@@ -270,10 +334,10 @@ A primeira versão foi recusada pelo dono: tratava "espaço sideral" como um qua
 
 A spec recomenda acabamento impecável nos RF-01 a RF-15 antes de qualquer adição. Eles estão atendidos, então o que sobra é escolher onde o tempo rende mais:
 
-1. **Pendências baratas fora dos RFs:** rodapé de atribuição no canvas, `LICENSE` e `README`, `ErrorBoundary` em volta do `<Stage>` (fecha RF-20). São de risco baixo e quase todas protegem a submissão.
+1. **Pendências baratas fora dos RFs:** fechadas em 12/11 (rodapé de atribuição, `LICENSE`, `README`; o `ErrorBoundary` já existia).
 2. **RF-32:** entregue em 06/11 (`165a18d`).
 3. **RF-28 e o motor de emergência por regras**, antes de qualquer IA: é o que funciona em blackout, o uso principal do RF-29. A IA (RF-18) entra depois, como camada opcional. Antes de começar, decida a regra 3 (diagnóstico) e valide o catálogo com um médico ou flight surgeon.
 4. **RF-31 (perfil da missão) e RF-33:** primeiro o perfil; depois estação espacial e espaço sideral, que são baratos; base lunar só se houver fonte para os parâmetros; foguete como fase de lançamento ou fora.
 5. **RF-30 (formulário mínimo):** se sobrar tempo; é o primeiro a cortar se RF-29 e RF-33 entrarem.
-   **RF-34 (exames epigenéticos):** independe do RF-31 e reaproveita a rota do OSDR (RF-26). Entra só se sobrar tempo; entre os propostos abertos, é cortado junto com o RF-30.
+   **RF-34 (perfil pré-voo):** entregue em 12/11, sem a rota do OSDR (cita os estudos por DOI).
 6. **Opcionais:** RF-23 é o mais barato (sequência a partir do diário); RF-26 e RF-24 são os primeiros a cair, pela ordem de corte da spec.

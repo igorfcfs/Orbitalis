@@ -2,9 +2,9 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { OSDR_TERMS, searchStudies } from './src/server/osdr'
 import { parseInput, requestExplanation, type ServerEnv } from './src/server/explain'
+import { clientKey, createLimiter } from './src/server/rateLimit'
+import { fetchSpaceWeather } from './src/server/spaceWeather'
 import type { SystemId } from './src/types'
-
-const iso = (d: Date) => d.toISOString().slice(0, 10)
 
 /**
  * Rota de servidor para o clima espacial (spec: chamadas externas só no servidor).
@@ -14,24 +14,9 @@ const iso = (d: Date) => d.toISOString().slice(0, 10)
 function spaceWeather(): Plugin {
   const handler = async (_req: unknown, res: import('node:http').ServerResponse) => {
     try {
-      const end = new Date()
-      const start = new Date(end.getTime() - 30 * 86_400_000)
-      const q = `startDate=${iso(start)}&endDate=${iso(end)}`
-      const get = async (kind: 'FLR' | 'SEP') => {
-        const ctrl = new AbortController()
-        const timer = setTimeout(() => ctrl.abort(), 5000)
-        try {
-          const r = await fetch(`https://ccmc.gsfc.nasa.gov/DONKI-API/get/${kind}?${q}`, { signal: ctrl.signal })
-          if (!r.ok) throw new Error(String(r.status))
-          const body = await r.json()
-          return Array.isArray(body) ? body : []
-        } finally {
-          clearTimeout(timer)
-        }
-      }
-      const [flr, sep] = await Promise.all([get('FLR'), get('SEP')])
+      const payload = await fetchSpaceWeather()
       res.setHeader('content-type', 'application/json')
-      res.end(JSON.stringify({ fetchedAt: new Date().toISOString(), flares: flr, sep }))
+      res.end(JSON.stringify(payload))
     } catch {
       res.statusCode = 502
       res.end('{"error":"unavailable"}')
@@ -78,12 +63,14 @@ function osdr(): Plugin {
  */
 function explain(): Plugin {
   let env: ServerEnv = {}
+  const limiter = createLimiter()
   const handler = (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => {
     const fail = (code: number) => {
       res.statusCode = code
       res.end('{"error":"unavailable"}')
     }
     if (req.method !== 'POST') return fail(405)
+    if (!limiter.allow(clientKey(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress))) return fail(429)
     let body = ''
     req.on('data', (c) => {
       body += c

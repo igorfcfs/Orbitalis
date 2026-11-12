@@ -9,6 +9,8 @@ import { deviceLine } from '../lib/device'
 import { paths, type Route } from '../lib/route'
 import { adherenceStreak } from '../lib/adherence'
 import { studyUrl, useStudies } from '../lib/osdr'
+import { collectedText, contextFor, doiUrl, studiesOf, systemFindings } from '../lib/personalize'
+import { KIND_LABEL, type Finding } from '../data/profile'
 import { useFeed } from '../lib/spaceWeather'
 import { useExplanation } from '../lib/useExplanation'
 import { useSim, useStore } from '../state/store'
@@ -163,7 +165,9 @@ function ExposureCard({ astro, sim }: { astro: Astronaut; sim: Sim }) {
       <p className="small muted">{profileOf(sim.scenario).dose.quantity === 'equivalent' ? 'Dose equivalent. ' : 'Effective dose. '}{profileOf(sim.scenario).dose.source}.{profileOf(sim.scenario).dose.assumed ? ' Not a published value for this crew.' : ''}</p>
       <dl className="exp-list">
         <dt>Career dose at Day {missionLength(sim)}</dt>
-        <dd className={`mono ${over ? 's-watch' : ''}`}>{fmt(arrival, 0)} mSv</dd>
+        <dd className={`mono ${over ? 's-watch' : ''}`}>
+          {fmt(arrival, 0)} mSv <span className="muted small">pre-flight {fmt(career.baseline, 0)} mSv</span> <ProvenanceBadge kind="ESTIMATED" />
+        </dd>
         <dt>Career limit [V1 4030]</dt>
         <dd className="mono">&lt; {fmt(limit, 0)} mSv</dd>
       </dl>
@@ -218,6 +222,35 @@ function StudiesCard({ system }: { system: SystemId }) {
   )
 }
 
+/**
+ * Perfil pré-voo (RF-34): notas de contexto do catálogo fechado, só para o próprio astronauta (níveis 2 e 3).
+ * Coletado em terra, sintético, e nunca muda status, limite nem ação. Sem perfil ou sem nota, nada aparece.
+ */
+function ProfileNotes({ astro, findings }: { astro: Astronaut; findings: Finding[] }) {
+  if (!astro.profile || !findings.length) return null
+  return (
+    <div className="feed" aria-label="Your pre-flight profile">
+      <div className="mr-top">
+        <span className="label">Your pre-flight profile</span>
+        <span className="prov" title="Exam taken on the ground before flight, not on board">PERIODIC</span>
+      </div>
+      <p className="small muted">{collectedText(astro.profile)} Synthetic profile for this prototype. It explains; it never changes a status, a limit or an action.</p>
+      <ul className="studies small">
+        {findings.map((f) => (
+          <li key={f.id}>
+            <strong>{f.label}</strong>
+            <span className="muted mono">{KIND_LABEL[f.kind]}</span>
+            <span>{f.note}</span>
+            {studiesOf(f).map((st) => (
+              <a key={st.doi} href={doiUrl(st.doi)} target="_blank" rel="noreferrer">{st.cite} · {st.who}</a>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 // ---------- Nível 2: o sistema ----------
 
 /** Medidor do nível 2: o valor com a tendência ao lado, o motivo do status e o limite que o julga, sem precisar abrir nada. */
@@ -233,7 +266,7 @@ function Tile({ astro, system, m }: { astro: Astronaut; system: SystemId; m: Res
         <Sparkline m={m} />
       </div>
       <p className="tile-why">{m.eval.reason}</p>
-      <p className="tile-dev small muted">{deviceLine(m)}</p>
+      <p className="tile-dev small muted">{deviceLine(m)}{contextFor(astro, m.id).length ? ' · pre-flight profile note' : ''}</p>
       <div className="tile-foot">
         <span className="mono">pre-flight {fmt(m.baseline, m.decimals)} {shortUnit(m.unit)}</span>
         <MetricBadge m={m} />
@@ -294,6 +327,7 @@ function System({ astro, system, sim }: { astro: Astronaut; system: SystemId; si
             </div>
           )}
           {system === 'radiation' && <FeedCard />}
+          <ProfileNotes astro={astro} findings={systemFindings(astro, system)} />
           <StudiesCard system={system} />
         </div>
       </details>
@@ -354,6 +388,7 @@ function Metric({ astro, system, metric, sim }: { astro: Astronaut; system: Syst
           <p className="small">{m.instrument}<span className="muted"> · {m.heritage}</span></p>
           <h3 className="label">How it is collected</h3>
           <p className="small">{m.how}{m.minutes > 0 ? ` About ${m.minutes} min.` : ''}</p>
+          <ProfileNotes astro={astro} findings={contextFor(astro, m.id)} />
         </div>
       </details>
 

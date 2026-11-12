@@ -668,3 +668,6 @@ tr:last-child td { border-bottom: 0; }
 .patients a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; }
 .patients a.on { background: var(--ink); color: #05070f; border-color: var(--ink); font-weight: 600; }
 @media (max-width: 720px) { .emg-btn span { display: none; } .emg-btn { padding: 0 12px; } .emg-pop { position: fixed; left: 12px; right: 12px; top: 72px; width: auto; } }
+
+/* Atribuição obrigatória do atlas (Z-Anatomy, CC BY-SA 4.0): sempre visível sobre o canvas */
+.canvas-attr { position: fixed; left: 12px; bottom: 6px; z-index: 11; max-width: min(520px, calc(100vw - 24px)); font: 400 10px/1.35 var(--font); color: var(--ink-3); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); pointer-events: none; }

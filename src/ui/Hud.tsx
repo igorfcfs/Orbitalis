@@ -12,6 +12,7 @@ import { useSim, useStore, xrayAllowed } from '../state/store'
 import type { Astronaut, Status } from '../types'
 import { EmergencyLauncher } from './Emergency'
 import { ScenarioSection } from './ScenarioCard'
+import { onArrowKeys } from './arrowNav'
 import { StatusPill } from './primitives'
 
 const WORDS = ['No one', 'One', 'Two', 'Three', 'Four']
@@ -99,7 +100,7 @@ export function CrewOverlay() {
         <p className="sub">{sub}</p>
       </section>
       {sceneFailed && (
-        <nav className="crew-list" aria-label="Crew">
+        <nav className="crew-list" aria-label="Crew" onKeyDown={onArrowKeys}>
           {list.map(({ a, status, off }) => (
             <a key={a.id} href={paths.body(a.id)} className={`plate static s-${status}`}>
               <span className="plate-head"><span className="plate-name">{a.name}</span><StatusPill status={status} /></span>
@@ -129,7 +130,7 @@ export function CrewOverlay() {
           </span>
         </div>
       ))}
-      {!sceneFailed && <nav className="a11y-rail" aria-label="Crew">
+      {!sceneFailed && <nav className="a11y-rail" aria-label="Crew" onKeyDown={onArrowKeys}>
         {list.map(({ a, status, off }) => (
           <a key={a.id} href={paths.body(a.id)}>
             {a.name}, {STATUS_LABEL[status].toLowerCase()}
@@ -254,7 +255,7 @@ export function SystemsRail({ route }: { route: Exclude<Route, { level: 0 }> }) 
   const astro = getAstronaut(route.id)
   const open = 'system' in route ? route.system : null
   return (
-    <nav className="sysrail" aria-label="Body systems" onPointerLeave={() => setRailSys(null)}>
+    <nav className="sysrail" aria-label="Body systems" onKeyDown={onArrowKeys} onPointerLeave={() => setRailSys(null)}>
       <span className="label sysrail-title">Systems</span>
       <ul>
         {BODY_ORDER.map((s) => {

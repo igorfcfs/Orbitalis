@@ -1,5 +1,6 @@
 import { ACTIONS } from '../data/actions'
 import { ASTRONAUTS } from '../data/astronauts'
+import { profilePacketLines } from './personalize'
 import { NOISE } from '../data/rules'
 import { linkText, profileOf } from '../data/scenarios'
 import { METRICS, PRIORITY_ORDER, SYSTEMS, SYSTEM_IDS } from '../data/systems'
@@ -361,6 +362,8 @@ export function packetText(astro: Astronaut, sim: Sim, flags: Record<string, tru
       `      ${m.eval.reason}`,
     )
   }
+  const profile = profilePacketLines(astro, [...new Set(items.map((i) => i.metric.system))])
+  if (profile.length) lines.push('', ...profile)
   lines.push('', 'Recent decisions')
   if (!decisions.length) lines.push('  None logged.')
   for (const d of decisions) {

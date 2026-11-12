@@ -61,7 +61,7 @@ const words = (s: string) => s.trim().split(/\s+/).filter(Boolean).length
 const numbersIn = (s: string) => (s.match(/\d+(?:\.\d+)?/g) ?? []).map(Number)
 
 /** Termos que a IA nunca pode usar: medicamento, dose, diagnóstico (regra 3). */
-const FORBIDDEN = /\b(diagnos\w*|prescri\w*|medicat\w*|medicine|tablets?|pills?|\d+\s?(mg|mcg|ml|iu)\b|ibuprofen|aspirin|antibiotic\w*|steroid\w*)\b/i
+export const FORBIDDEN = /\b(diagnos\w*|prescri\w*|medicat\w*|medicine|tablets?|pills?|\d+\s?(mg|mcg|ml|iu)\b|ibuprofen|aspirin|antibiotic\w*|steroid\w*)\b/i
 
 /** Números que o texto da IA pode citar: só os que estão na entrada. */
 export function allowedNumbers(input: ExplainInput): Set<number> {

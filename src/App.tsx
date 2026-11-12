@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { go, paths, parentPath, useRoute } from './lib/route'
+import { ATTRIBUTION } from './scene/anatomy'
 import { SafeStage } from './scene/SafeStage'
 import { useStore } from './state/store'
 import { CrewOverlay, Credits, Dock, Hud, HoverTip, LayersRail, MenuSheet, SystemsRail } from './ui/Hud'
@@ -63,6 +64,7 @@ export default function App() {
       </div>
       <MenuSheet route={route} />
       <Credits />
+      <footer className="canvas-attr" lang="en">{ATTRIBUTION}</footer>
     </>
   )
 }

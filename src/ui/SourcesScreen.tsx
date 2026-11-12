@@ -2,6 +2,8 @@ import { METRICS, SYSTEMS, SYSTEM_IDS } from '../data/systems'
 import { LINK_DELAY_MIN } from '../lib/model'
 import { paths } from '../lib/route'
 import { ATTRIBUTION } from '../scene/anatomy'
+import { PROFILE_STUDIES } from '../data/profile'
+import { doiUrl } from '../lib/personalize'
 import { PROVENANCE_HELP, ProvenanceBadge, ThresholdChip } from './primitives'
 import type { Provenance } from '../types'
 
@@ -18,6 +20,9 @@ const SOURCES: { name: string; use: string; href: string }[] = [
   { name: 'UNSCEAR, natural background radiation', use: 'About 2.4 mSv per year on Earth, the dose rate in the rocket on the launch pad', href: 'https://www.unscear.org/' },
   { name: 'Zhang et al., 2020, Chang’E-4 lunar surface dosimetry', use: 'Dose equivalent of about 1.37 mSv/day on the lunar surface, behind the lunar base scenario', href: 'https://doi.org/10.1126/sciadv.aaz1334' },
   { name: 'Poly Haven', use: 'Studio lighting HDRI and fabric and paint textures, CC0', href: 'https://polyhaven.com/' },
+  ...Object.values(PROFILE_STUDIES).map((st) => ({
+    name: st.cite, use: `Pre-flight profile notes (${st.who}). Context only, never a status`, href: doiUrl(st.doi),
+  })),
 ]
 
 const CALIBRATIONS: { label: string; value: string; source: string; href: string }[] = [
@@ -58,6 +63,7 @@ const COVERAGE: { id: string; text: string; where: string }[] = [
   { id: 'RF-27', text: 'Outcome of each action: system status then and now', where: 'Decision diary' },
   { id: 'RF-28', text: 'Closed catalog of emergency actions, each with its protocol cited', where: 'Emergency button in the top bar, on every screen' },
   { id: 'RF-29', text: 'Emergency flow by rules: protocol category, what the record shows, ordered steps, works in blackout', where: 'Emergency button in the top bar, on every screen' },
+  { id: 'RF-34', text: 'Notes personalized by each astronaut’s synthetic pre-flight genomic and epigenetic profile', where: 'Metric → About this number, System → How it works, and the packet' },
 ]
 
 const PROVS = Object.keys(PROVENANCE_HELP) as Provenance[]
@@ -131,6 +137,7 @@ export function SourcesScreen() {
           <ul className="decl small">
             <li>The crew is fictional. Apart from the calibrations above, all physiological signals are synthetic and illustrative.</li>
             <li>Status is computed by deterministic code and never by AI. Explanations are written by an AI model only when the server has an API key, from numbers the code computed. The model picks actions by ID from the closed catalog, and its text is rejected if it adds a number, names a medication or diagnosis, or breaks the length limits. Without a key, or on any failure, the fixed catalog text is shown, marked “Offline explanation”.</li>
+            <li>Each astronaut has a synthetic pre-flight profile (genotype, DNA methylation, serology and history), collected on the ground before launch and never measured in orbit. It holds only findings that a published study ties to a spaceflight risk, picked from a closed list. It chooses and orders context notes on the astronaut’s own screens and in the flight surgeon packet. It is never shown on the Crew screen, never sent to the AI model, and never changes a status, a limit, a projection or an action. No real astronaut’s genetic data is used.</li>
             <li>Actions come from a closed catalog. The app gives no diagnosis, medication or dose. The emergency flow picks a protocol category by rules from closed answers and names no cause. Its steps cite published guidelines checked from summaries only, and need a flight surgeon’s validation before any real use.</li>
             <li>Three places, each a profile of gravity, dose rate, link, evacuation, posture and scenery: the rocket on the launch pad (the rocket stands upright and the crew lies on their backs, strapped in), the space station on the cruise to Mars, where the EVA suit takes you out into deep space on a tether, and the lunar base on firm ground in 1/6 g, where the suit takes you out onto the surface. The rocket leads to the station or to the base. The lunar series keep the microgravity physiology model because no rate for 1/6 g is published, and each place restarts its clock from the pre-flight baseline. The lunar dose is a dose equivalent, while the NASA career limit is an effective dose. Hops on the Moon follow a parabola at 1.62 m/s².</li>
             <li>Prototype assumption, not a published value: outside the hull only the EVA suit shields you, modeled as twice the 1.8 mSv/day measured inside a spacecraft. Replace it with the mission’s own dosimetry.</li>
